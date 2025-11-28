@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
 
@@ -17,7 +17,7 @@ export default function AdminVerifications() {
   const [error, setError] = useState<string | null>(null)
   const [loadingId, setLoadingId] = useState<number | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return
     try {
       const res = await api.get<{ verifications: Verification[] }>('/admin/verification/pending', token)
@@ -25,11 +25,11 @@ export default function AdminVerifications() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load verifications')
     }
-  }
+  }, [token])
 
   useEffect(() => {
-    load()
-  }, [token])
+    void load()
+  }, [load])
 
   const act = async (id: number, action: 'approve' | 'reject') => {
     if (!token) return

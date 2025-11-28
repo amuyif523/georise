@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
 
@@ -17,7 +17,7 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return
     try {
       const res = await api.get<{ users: User[] }>('/admin/users', token)
@@ -25,11 +25,14 @@ export default function AdminUsers() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users')
     }
-  }
+  }, [token])
 
   useEffect(() => {
-    load()
-  }, [token])
+    const run = async () => {
+      await load()
+    }
+    void run()
+  }, [load])
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-3">

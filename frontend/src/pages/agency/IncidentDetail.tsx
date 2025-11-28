@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
@@ -19,7 +19,7 @@ export default function IncidentDetail() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token || !id) return
     try {
       const res = await api.get<{ incident: Incident }>(`/agency/incidents/${id}`, token)
@@ -27,11 +27,11 @@ export default function IncidentDetail() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load incident')
     }
-  }
+  }, [token, id])
 
   useEffect(() => {
-    load()
-  }, [token, id])
+    void load()
+  }, [load])
 
   const act = async (path: string, body?: unknown) => {
     if (!token || !id) return
