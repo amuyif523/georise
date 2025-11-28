@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { login, register } from './service'
+import { login, register, getUserById } from './service'
 import type { LoginInput, RegisterInput } from './types'
 
 export async function registerHandler(req: Request, res: Response) {
@@ -27,5 +27,21 @@ export async function loginHandler(req: Request, res: Response) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Login failed'
     return res.status(401).json({ error: message })
+  }
+}
+
+export async function meHandler(req: Request, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+  try {
+    const user = await getUserById(req.user.id)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    return res.json({ user })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch user'
+    return res.status(500).json({ error: message })
   }
 }

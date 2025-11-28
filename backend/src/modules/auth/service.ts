@@ -76,6 +76,19 @@ export async function login(input: LoginInput): Promise<{ token: string; user: A
   return { token, user: toAuthUser(user, user.role_name) }
 }
 
+export async function getUserById(userId: number): Promise<AuthUser | null> {
+  const rows = await query<UserRecord & { role_name: string }>(
+    `SELECT u.*, r.name as role_name
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE u.id = $1`,
+    [userId]
+  )
+  const user = rows[0]
+  if (!user) return null
+  return toAuthUser(user, user.role_name)
+}
+
 export function signToken(userId: number, role: string): string {
   return sign({ sub: userId, role }, JWT_SECRET, signOptions)
 }
