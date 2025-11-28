@@ -23,7 +23,12 @@ class NotVerifiedError extends Error {
 
 export async function createIncident(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
-  const { description, category } = req.body as { description?: string; category?: string }
+  const { description, category, lat, lng } = req.body as {
+    description?: string
+    category?: string
+    lat?: number
+    lng?: number
+  }
   if (!description) return res.status(400).json({ error: 'description is required' })
 
   try {
@@ -37,10 +42,10 @@ export async function createIncident(req: Request, res: Response) {
   }
 
   const rows = await query<IncidentRecord>(
-    `INSERT INTO incidents (reporter_id, description, category, status)
-     VALUES ($1, $2, $3, 'submitted')
+    `INSERT INTO incidents (reporter_id, description, category, status, lat, lng, geom)
+     VALUES ($1, $2, $3, 'submitted', $4, $5, CASE WHEN $4 IS NOT NULL AND $5 IS NOT NULL THEN ST_SetSRID(ST_MakePoint($5, $4), 4326) ELSE NULL END)
      RETURNING *`,
-    [req.user.id, description, category ?? null]
+    [req.user.id, description, category ?? null, lat ?? null, lng ?? null]
   )
   const incident = rows[0]
 

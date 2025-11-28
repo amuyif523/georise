@@ -41,6 +41,9 @@ export async function ensureSchema() {
       description TEXT NOT NULL,
       category TEXT,
       status TEXT NOT NULL DEFAULT 'submitted',
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
+      geom geometry(Point, 4326),
       assigned_agency_id INTEGER REFERENCES agencies(id),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -84,6 +87,10 @@ export async function ensureSchema() {
       changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+
+    ALTER TABLE incidents ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+    ALTER TABLE incidents ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
+    ALTER TABLE incidents ADD COLUMN IF NOT EXISTS geom geometry(Point, 4326);
     ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_agency_id INTEGER REFERENCES agencies(id);
     `
   )

@@ -7,6 +7,7 @@ import citizenRoutes from './modules/citizen/routes'
 import incidentRoutes from './modules/incidents/routes'
 import agencyIncidentRoutes from './modules/incidents/agencyRoutes'
 import adminRoutes from './modules/admin/routes'
+import gisRoutes from './modules/gis/routes'
 
 dotenv.config()
 
@@ -25,6 +26,7 @@ app.use('/citizen', citizenRoutes)
 app.use('/citizen', incidentRoutes)
 app.use('/agency', agencyIncidentRoutes)
 app.use('/admin', adminRoutes)
+app.use('/gis', gisRoutes)
 
 ensureSchema()
   .then(() => {

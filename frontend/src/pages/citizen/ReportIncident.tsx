@@ -10,6 +10,8 @@ export default function ReportIncident() {
   const [category, setCategory] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [lat, setLat] = useState('')
+  const [lng, setLng] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +21,12 @@ export default function ReportIncident() {
     try {
       const res = await api.post<{ incident: { id: number } }>(
         '/citizen/incidents',
-        { description, category: category || undefined },
+        {
+          description,
+          category: category || undefined,
+          lat: lat ? Number(lat) : undefined,
+          lng: lng ? Number(lng) : undefined,
+        },
         token
       )
       navigate(`/citizen/incidents/${res.incident.id}`)
@@ -59,6 +66,26 @@ export default function ReportIncident() {
               onChange={(e) => setDescription(e.target.value)}
               required
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="block text-sm text-slate-300">Latitude (optional)</label>
+              <input
+                className="w-full rounded border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                placeholder="e.g., 9.010"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm text-slate-300">Longitude (optional)</label>
+              <input
+                className="w-full rounded border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100"
+                value={lng}
+                onChange={(e) => setLng(e.target.value)}
+                placeholder="e.g., 38.761"
+              />
+            </div>
           </div>
           {message && <p className="text-sm text-red-400">{message}</p>}
           <button
