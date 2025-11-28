@@ -41,6 +41,7 @@ export async function ensureSchema() {
       description TEXT NOT NULL,
       category TEXT,
       status TEXT NOT NULL DEFAULT 'submitted',
+      assigned_agency_id INTEGER REFERENCES agencies(id),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -72,6 +73,18 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS incident_status_history (
+      id SERIAL PRIMARY KEY,
+      incident_id INTEGER NOT NULL REFERENCES incidents(id),
+      from_status TEXT,
+      to_status TEXT NOT NULL,
+      changed_by INTEGER REFERENCES users(id),
+      notes TEXT,
+      changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    ALTER TABLE incidents ADD COLUMN IF NOT EXISTS assigned_agency_id INTEGER REFERENCES agencies(id);
     `
   )
 

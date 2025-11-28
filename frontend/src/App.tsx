@@ -12,6 +12,8 @@ import Verification from './pages/citizen/Verification'
 import ReportIncident from './pages/citizen/ReportIncident'
 import MyReports from './pages/citizen/MyReports'
 import IncidentDetail from './pages/citizen/IncidentDetail'
+import AgencyIncidentList from './pages/agency/IncidentList'
+import AgencyIncidentDetail from './pages/agency/IncidentDetail'
 
 function RoleRedirect() {
   const { user } = useAuth()
@@ -43,6 +45,8 @@ export default function App() {
 
         <Route element={<ProtectedRoute allowedRoles={['agency_staff', 'admin']} />}>
           <Route path="/agency/dashboard" element={<AgencyDashboard />} />
+          <Route path="/agency/incidents" element={<AgencyIncidentList />} />
+          <Route path="/agency/incidents/:id" element={<AgencyIncidentDetail />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
