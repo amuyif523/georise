@@ -5,6 +5,7 @@ export type UserRecord = {
   phone: string | null
   password_hash: string
   role_id: number
+  verification_status: string
   created_at: Date
 }
 
@@ -19,6 +20,7 @@ export type AuthUser = {
   email: string | null
   phone: string | null
   role: string
+  verificationStatus: string
 }
 
 export type RegisterInput = {

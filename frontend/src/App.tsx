@@ -8,6 +8,7 @@ import AgencyDashboard from './pages/dashboard/AgencyDashboard'
 import AdminDashboard from './pages/dashboard/AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/auth'
+import Verification from './pages/citizen/Verification'
 
 function RoleRedirect() {
   const { user } = useAuth()
@@ -31,6 +32,7 @@ export default function App() {
 
         <Route element={<ProtectedRoute allowedRoles={['citizen']} />}>
           <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
+          <Route path="/citizen/verify" element={<Verification />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['agency_staff', 'admin']} />}>

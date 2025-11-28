@@ -10,6 +10,7 @@ type AuthUser = {
   email: string | null
   phone: string | null
   role: Role
+  verificationStatus: string
 }
 
 type AuthContextValue = {

@@ -25,6 +25,7 @@ function toAuthUser(user: UserRecord, roleName: string): AuthUser {
     email: user.email,
     phone: user.phone,
     role: roleName,
+    verificationStatus: user.verification_status,
   }
 }
 

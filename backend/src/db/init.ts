@@ -17,7 +17,21 @@ export async function ensureSchema() {
       phone TEXT UNIQUE,
       password_hash TEXT NOT NULL,
       role_id INTEGER NOT NULL REFERENCES roles(id),
+      verification_status TEXT NOT NULL DEFAULT 'unverified',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status TEXT NOT NULL DEFAULT 'unverified';
+
+    CREATE TABLE IF NOT EXISTS citizen_verifications (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      national_id TEXT NOT NULL,
+      phone TEXT,
+      otp_code TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      confirmed_at TIMESTAMPTZ
     );
     `
   )
