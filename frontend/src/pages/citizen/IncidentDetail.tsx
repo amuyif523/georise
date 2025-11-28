@@ -18,6 +18,7 @@ type AIInfo = {
   confidence: number
   summary: string
   model_version: string
+  lowConfidence?: boolean
 } | null
 
 export default function IncidentDetail() {
@@ -87,7 +88,9 @@ export default function IncidentDetail() {
             <p className="text-sm font-semibold text-blue-200">
               AI Classification: {ai.category} (Severity {ai.severity_label})
             </p>
-            <p className="text-xs text-slate-200">Confidence: {ai.confidence}</p>
+            <p className="text-xs text-slate-200">
+              Confidence: {ai.confidence} {ai.lowConfidence ? '(low)' : ''}
+            </p>
             <p className="text-xs text-slate-300">Summary: {ai.summary}</p>
           </div>
         )}

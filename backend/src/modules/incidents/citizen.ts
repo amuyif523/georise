@@ -4,6 +4,8 @@ import type { IncidentRecord } from './types'
 import type { UserRecord } from '../auth/types'
 import { classifyIncident } from './aiClient'
 
+const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
+
 async function ensureVerified(userId: number) {
   const users = await query<UserRecord>('SELECT * FROM users WHERE id = $1', [userId])
   const user = users[0]
@@ -76,7 +78,14 @@ export async function createIncident(req: Request, res: Response) {
     )
   }
 
-  return res.status(201).json({ incident, ai })
+  const aiMeta = ai
+    ? {
+        ...ai,
+        lowConfidence: ai.confidence < MIN_CONFIDENCE,
+      }
+    : null
+
+  return res.status(201).json({ incident, ai: aiMeta })
 }
 
 export async function listIncidents(req: Request, res: Response) {
