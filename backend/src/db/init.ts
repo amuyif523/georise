@@ -33,6 +33,15 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       confirmed_at TIMESTAMPTZ
     );
+
+    CREATE TABLE IF NOT EXISTS incidents (
+      id SERIAL PRIMARY KEY,
+      reporter_id INTEGER NOT NULL REFERENCES users(id),
+      description TEXT NOT NULL,
+      category TEXT,
+      status TEXT NOT NULL DEFAULT 'submitted',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     `
   )
 

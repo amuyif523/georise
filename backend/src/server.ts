@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import authRoutes from './modules/auth/routes'
 import { ensureSchema } from './db/init'
 import citizenRoutes from './modules/citizen/routes'
+import incidentRoutes from './modules/incidents/routes'
 
 dotenv.config()
 
@@ -19,6 +20,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRoutes)
 app.use('/citizen', citizenRoutes)
+app.use('/citizen', incidentRoutes)
 
 ensureSchema()
   .then(() => {

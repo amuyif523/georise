@@ -9,6 +9,9 @@ import AdminDashboard from './pages/dashboard/AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/auth'
 import Verification from './pages/citizen/Verification'
+import ReportIncident from './pages/citizen/ReportIncident'
+import MyReports from './pages/citizen/MyReports'
+import IncidentDetail from './pages/citizen/IncidentDetail'
 
 function RoleRedirect() {
   const { user } = useAuth()
@@ -33,6 +36,9 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['citizen']} />}>
           <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
           <Route path="/citizen/verify" element={<Verification />} />
+          <Route path="/citizen/report" element={<ReportIncident />} />
+          <Route path="/citizen/incidents" element={<MyReports />} />
+          <Route path="/citizen/incidents/:id" element={<IncidentDetail />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['agency_staff', 'admin']} />}>

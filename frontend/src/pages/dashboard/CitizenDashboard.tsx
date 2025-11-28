@@ -52,13 +52,13 @@ export default function CitizenDashboard() {
             <button
               className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded disabled:opacity-50"
               disabled={!isVerified}
-              onClick={() => {/* future: navigate to report */}}
+              onClick={() => navigate('/citizen/report')}
             >
               Report Incident
             </button>
             <button
               className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded"
-              onClick={() => {/* future: navigate to my incidents */}}
+              onClick={() => navigate('/citizen/incidents')}
             >
               My Reports
             </button>
