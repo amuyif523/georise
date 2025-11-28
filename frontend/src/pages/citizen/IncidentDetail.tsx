@@ -11,19 +11,30 @@ type Incident = {
   created_at: string
 }
 
+type AIInfo = {
+  category: string
+  severity_score: number
+  severity_label: number
+  confidence: number
+  summary: string
+  model_version: string
+} | null
+
 export default function IncidentDetail() {
   const { id } = useParams()
   const { token } = useAuth()
   const navigate = useNavigate()
   const [incident, setIncident] = useState<Incident | null>(null)
+  const [ai, setAi] = useState<AIInfo>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchIncident = async () => {
       if (!token || !id) return
       try {
-        const res = await api.get<{ incident: Incident }>(`/citizen/incidents/${id}`, token)
+        const res = await api.get<{ incident: Incident; ai: AIInfo }>(`/citizen/incidents/${id}`, token)
         setIncident(res.incident)
+        setAi(res.ai)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load incident')
       }
@@ -70,6 +81,16 @@ export default function IncidentDetail() {
           {incident.status}
         </span>
         <p className="text-slate-200 whitespace-pre-wrap">{incident.description}</p>
+
+        {ai && (
+          <div className="rounded border border-blue-500/40 bg-blue-500/10 p-3 space-y-1">
+            <p className="text-sm font-semibold text-blue-200">
+              AI Classification: {ai.category} (Severity {ai.severity_label})
+            </p>
+            <p className="text-xs text-slate-200">Confidence: {ai.confidence}</p>
+            <p className="text-xs text-slate-300">Summary: {ai.summary}</p>
+          </div>
+        )}
       </div>
     </div>
   )

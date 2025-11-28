@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { query } from '../../config/db'
 import type { IncidentRecord } from './types'
 import type { UserRecord } from '../auth/types'
+import { classifyIncident } from './aiClient'
 
 async function ensureVerified(userId: number) {
   const users = await query<UserRecord>('SELECT * FROM users WHERE id = $1', [userId])
@@ -34,7 +35,36 @@ export async function createIncident(req: Request, res: Response) {
      RETURNING *`,
     [req.user.id, description, category ?? null]
   )
-  return res.status(201).json({ incident: rows[0] })
+  const incident = rows[0]
+
+  // Call AI stub, but do not fail if it is unavailable
+  const ai = await classifyIncident(description)
+  if (ai) {
+    await query(
+      `INSERT INTO incident_ai_outputs
+       (incident_id, category_pred, severity_score, severity_label, confidence, summary, model_version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (incident_id) DO UPDATE SET
+         category_pred = EXCLUDED.category_pred,
+         severity_score = EXCLUDED.severity_score,
+         severity_label = EXCLUDED.severity_label,
+         confidence = EXCLUDED.confidence,
+         summary = EXCLUDED.summary,
+         model_version = EXCLUDED.model_version
+      `,
+      [
+        incident.id,
+        ai.category,
+        ai.severity_score,
+        ai.severity_label,
+        ai.confidence,
+        ai.summary,
+        ai.model_version,
+      ]
+    )
+  }
+
+  return res.status(201).json({ incident, ai })
 }
 
 export async function listIncidents(req: Request, res: Response) {
@@ -49,11 +79,41 @@ export async function listIncidents(req: Request, res: Response) {
 export async function getIncident(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
   const { id } = req.params
-  const rows = await query<IncidentRecord>(
-    `SELECT * FROM incidents WHERE id = $1 AND reporter_id = $2`,
+  const rows = await query<
+    IncidentRecord & {
+      category_pred: string | null
+      severity_score: number | null
+      severity_label: number | null
+      confidence: number | null
+      ai_summary: string | null
+      model_version: string | null
+    }
+  >(
+    `SELECT i.*, a.category_pred, a.severity_score, a.severity_label, a.confidence, a.summary as ai_summary, a.model_version
+     FROM incidents i
+     LEFT JOIN incident_ai_outputs a ON a.incident_id = i.id
+     WHERE i.id = $1 AND i.reporter_id = $2`,
     [id, req.user.id]
   )
   const incident = rows[0]
   if (!incident) return res.status(404).json({ error: 'Not found' })
-  return res.json({ incident })
+  return res.json({
+    incident: {
+      id: incident.id,
+      description: incident.description,
+      category: incident.category,
+      status: incident.status,
+      created_at: incident.created_at,
+    },
+    ai: incident.category_pred
+      ? {
+          category: incident.category_pred,
+          severity_score: incident.severity_score,
+          severity_label: incident.severity_label,
+          confidence: incident.confidence,
+          summary: incident.ai_summary,
+          model_version: incident.model_version,
+        }
+      : null,
+  })
 }

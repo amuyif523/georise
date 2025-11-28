@@ -44,6 +44,14 @@ services:
     ports:
       - "3000:3000"
 
+  ai-service:
+    build:
+      context: ../ai-service
+    environment:
+      PORT: 9000
+    ports:
+      - "9000:9000"
+
   # ai-service:
   #   build:
   #     context: ../ai-service

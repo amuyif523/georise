@@ -42,6 +42,17 @@ export async function ensureSchema() {
       status TEXT NOT NULL DEFAULT 'submitted',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS incident_ai_outputs (
+      incident_id INTEGER PRIMARY KEY REFERENCES incidents(id),
+      category_pred TEXT,
+      severity_score NUMERIC,
+      severity_label INTEGER,
+      confidence NUMERIC,
+      summary TEXT,
+      model_version TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     `
   )
 
