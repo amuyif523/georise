@@ -1,17 +1,48 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
+import Landing from './pages/Landing'
+import Login from './pages/public/Login'
+import Register from './pages/public/Register'
+import CitizenDashboard from './pages/dashboard/CitizenDashboard'
+import AgencyDashboard from './pages/dashboard/AgencyDashboard'
+import AdminDashboard from './pages/dashboard/AdminDashboard'
+import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/AuthContext'
 
-function App() {
-  return (
-    <main className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center px-6">
-      <div className="text-center space-y-3">
-        <p className="text-xs uppercase tracking-[0.3em] text-cyan-400">GEORISE</p>
-        <h1 className="text-3xl font-bold">Frontend scaffold is up</h1>
-        <p className="text-slate-400 text-sm">
-          Vite + React + Tailwind. Start building slices here.
-        </p>
-      </div>
-    </main>
-  )
+function RoleRedirect() {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />
+  if (user.role === 'agency_staff') return <Navigate to="/agency/dashboard" replace />
+  return <Navigate to="/citizen/dashboard" replace />
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        <Route element={<ProtectedRoute allowedRoles={['citizen', 'agency_staff', 'admin']} />}>
+          <Route path="/me" element={<RoleRedirect />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['citizen']} />}>
+          <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['agency_staff', 'admin']} />}>
+          <Route path="/agency/dashboard" element={<AgencyDashboard />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
