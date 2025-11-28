@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { query } from '../../config/db'
 import type { IncidentRecord } from './types'
 import { recordStatusChange } from './history'
+import { getHistory } from './history'
 
 type AgencyContext = {
   agencyId: number
@@ -23,11 +24,16 @@ export async function listAgencyIncidents(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
   try {
     const { agencyId } = await getStaffAgency(req.user.id)
+    const page = Number(req.query.page ?? 1)
+    const pageSize = Number(req.query.pageSize ?? 10)
+    const limit = Math.min(pageSize, 50)
+    const offset = (Math.max(page, 1) - 1) * limit
+
     const rows = await query<IncidentRecord>(
-      `SELECT * FROM incidents WHERE assigned_agency_id = $1 ORDER BY created_at DESC`,
-      [agencyId]
+      `SELECT * FROM incidents WHERE assigned_agency_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+      [agencyId, limit, offset]
     )
-    return res.json({ incidents: rows })
+    return res.json({ incidents: rows, page, pageSize: limit })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to fetch incidents' })
   }
@@ -44,7 +50,8 @@ export async function getAgencyIncident(req: Request, res: Response) {
     )
     const incident = rows[0]
     if (!incident) return res.status(404).json({ error: 'Not found' })
-    return res.json({ incident })
+    const history = await getHistory(incident.id)
+    return res.json({ incident, history })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to fetch incident' })
   }

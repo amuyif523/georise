@@ -11,6 +11,15 @@ type Incident = {
   created_at: string
 }
 
+type HistoryItem = {
+  id: number
+  from_status: string | null
+  to_status: string
+  changed_by: number | null
+  notes: string | null
+  changed_at: string
+}
+
 export default function IncidentDetail() {
   const { id } = useParams()
   const { token } = useAuth()
@@ -18,12 +27,17 @@ export default function IncidentDetail() {
   const [incident, setIncident] = useState<Incident | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [history, setHistory] = useState<HistoryItem[]>([])
 
   const load = useCallback(async () => {
     if (!token || !id) return
     try {
-      const res = await api.get<{ incident: Incident }>(`/agency/incidents/${id}`, token)
+      const res = await api.get<{ incident: Incident; history: HistoryItem[] }>(
+        `/agency/incidents/${id}`,
+        token
+      )
       setIncident(res.incident)
+      setHistory(res.history || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load incident')
     }
@@ -87,6 +101,23 @@ export default function IncidentDetail() {
         </span>
         <p className="text-slate-200 whitespace-pre-wrap">{incident.description}</p>
       </div>
+
+      {history.length > 0 && (
+        <div className="rounded border border-slate-800 bg-slate-900/50 p-3 space-y-2">
+          <p className="font-semibold text-slate-200">Status History</p>
+          {history.map((h) => (
+            <div
+              key={h.id}
+              className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0"
+            >
+              <p>
+                {h.from_status ?? '�?"'} → {h.to_status}
+              </p>
+              <p className="text-xs text-slate-500">{new Date(h.changed_at).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-2">
         <h3 className="font-semibold">Actions</h3>

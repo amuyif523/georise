@@ -3,6 +3,7 @@ import { query } from '../../config/db'
 import type { IncidentRecord } from './types'
 import type { UserRecord } from '../auth/types'
 import { classifyIncident } from './aiClient'
+import { recordStatusChange, getHistory } from './history'
 
 const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
@@ -50,6 +51,7 @@ export async function createIncident(req: Request, res: Response) {
     [req.user.id, description, category ?? null, lat ?? null, lng ?? null]
   )
   const incident = rows[0]
+  await recordStatusChange(incident.id, null, 'submitted', req.user.id)
 
   // Call AI stub, but do not fail if it is unavailable
   const ai = await classifyIncident(description)
@@ -90,11 +92,16 @@ export async function createIncident(req: Request, res: Response) {
 
 export async function listIncidents(req: Request, res: Response) {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
+  const page = Number(req.query.page ?? 1)
+  const pageSize = Number(req.query.pageSize ?? 10)
+  const limit = Math.min(pageSize, 50)
+  const offset = (Math.max(page, 1) - 1) * limit
+
   const rows = await query<IncidentRecord>(
-    `SELECT * FROM incidents WHERE reporter_id = $1 ORDER BY created_at DESC`,
-    [req.user.id]
+    `SELECT * FROM incidents WHERE reporter_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+    [req.user.id, limit, offset]
   )
-  return res.json({ incidents: rows })
+  return res.json({ incidents: rows, page, pageSize: limit })
 }
 
 export async function getIncident(req: Request, res: Response) {
@@ -118,6 +125,7 @@ export async function getIncident(req: Request, res: Response) {
   )
   const incident = rows[0]
   if (!incident) return res.status(404).json({ error: 'Not found' })
+  const history = await getHistory(incident.id)
   return res.json({
     incident: {
       id: incident.id,
@@ -126,6 +134,7 @@ export async function getIncident(req: Request, res: Response) {
       status: incident.status,
       created_at: incident.created_at,
     },
+    history,
     ai: incident.category_pred
       ? {
           category: incident.category_pred,

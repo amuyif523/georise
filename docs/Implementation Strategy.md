@@ -1166,6 +1166,46 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
     - Prepare PowerPoint & demo script
         
 - Demo: Practice defense.
+
+---
+
+## 12. Remaining Workplan From Current State to Deployment
+
+### Current State (completed)
+- Phases 0�?"5 largely implemented: repo/infra, auth/RBAC, citizen verification + incident reporting, agency workflow, admin panels, AI stub, GIS point storage + map markers.
+
+### Phase 6 �?" Testing & Hardening (in progress)
+- Add integration/Postman suites for auth, citizen incidents, agency actions, admin endpoints.
+- Expand unit/UI tests (agency/admin pages, GIS endpoint, status transitions).
+- Add rate limiting (login, verification, incident submit) and pagination/filters on lists.
+- Surface incident status history in UI; tighten CORS/config.
+
+### Phase 7 �?" GIS Maturity
+- `/gis/incidents` with bbox/time/status/category filters; add clustering/heatmap option.
+- Jurisdiction filtering: agency sees incidents intersecting their polygons.
+- Frontend: map filters, clustering toggle, heatmap view.
+
+### Phase 8 �?" AI Maturity
+- Swap rule-based stub for real model (DistilBERT/shallow model) container; keep same `/classify` contract.
+- Add severity/confidence thresholds and UI flags; store model version and reclass logs.
+
+### Phase 9 �?" Admin/Agency Polish
+- Admin: richer dashboards, user status updates, agency edits, verification audit trail.
+- Agency: live incident feed (WebSocket/polling), better filters, status history display.
+- Seed scripts for demo data (admin, agency, citizens, incidents).
+
+### Phase 10 �?" Migrations & Seeds
+- Introduce migration tool (Prisma/Knex/sqlx) and formal seeds (roles, admin user, agency, staff, sample incidents).
+- Align schema with migrations; drop init-time DDL after migration adoption.
+
+### Phase 11 �?" Deployment Readiness
+- Docker-compose prod profile; env templates; health checks.
+- Basic monitoring/logging; security pass (secrets, CORS, TLS guidance).
+- Final performance pass: indexes, bbox limits, payload limits.
+
+### Phase 12 �?" Documentation & Demo Prep
+- Update docs to match implementation; record CI status; capture screenshots.
+- Demo script covering citizen �+' agency �+' admin flows with AI/GIS visible.
 ---
 
 ## 11. Execution Hardening Addendum
