@@ -9,9 +9,15 @@ async function ensureVerified(userId: number) {
   const user = users[0]
   if (!user) throw new Error('User not found')
   if (user.verification_status !== 'verified') {
-    const err: Error & { code?: string } = new Error('User not verified')
-    err.code = 'NOT_VERIFIED'
-    throw err
+    throw new NotVerifiedError()
+  }
+}
+
+class NotVerifiedError extends Error {
+  code: 'NOT_VERIFIED'
+  constructor() {
+    super('User not verified')
+    this.code = 'NOT_VERIFIED'
   }
 }
 
@@ -23,10 +29,11 @@ export async function createIncident(req: Request, res: Response) {
   try {
     await ensureVerified(req.user.id)
   } catch (err) {
-    if (err instanceof Error && (err as any).code === 'NOT_VERIFIED') {
+    if (err instanceof NotVerifiedError) {
       return res.status(403).json({ error: 'Verification required' })
     }
-    return res.status(400).json({ error: err instanceof Error ? err.message : 'Cannot create incident' })
+    const message = err instanceof Error ? err.message : 'Cannot create incident'
+    return res.status(400).json({ error: message })
   }
 
   const rows = await query<IncidentRecord>(
