@@ -6,6 +6,7 @@ import { ensureSchema } from './db/init'
 import citizenRoutes from './modules/citizen/routes'
 import incidentRoutes from './modules/incidents/routes'
 import agencyIncidentRoutes from './modules/incidents/agencyRoutes'
+import adminRoutes from './modules/admin/routes'
 
 dotenv.config()
 
@@ -23,6 +24,7 @@ app.use('/auth', authRoutes)
 app.use('/citizen', citizenRoutes)
 app.use('/citizen', incidentRoutes)
 app.use('/agency', agencyIncidentRoutes)
+app.use('/admin', adminRoutes)
 
 ensureSchema()
   .then(() => {

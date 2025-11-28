@@ -51,6 +51,10 @@ export default function App() {
 
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/home" element={<AdminDashboardPage />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/agencies" element={<AdminAgencies />} />
+          <Route path="/admin/verification" element={<AdminVerifications />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -58,3 +62,7 @@ export default function App() {
     </BrowserRouter>
   )
 }
+import AdminDashboardPage from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/Users'
+import AdminAgencies from './pages/admin/Agencies'
+import AdminVerifications from './pages/admin/Verifications'
