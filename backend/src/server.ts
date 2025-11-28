@@ -1,19 +1,30 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import express from 'express'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import authRoutes from './modules/auth/routes'
+import { ensureSchema } from './db/init'
 
-dotenv.config();
+dotenv.config()
 
-const app = express();
-const port = process.env.PORT || 8000;
+const app = express()
+const port = process.env.PORT || 8000
 
-app.use(cors());
-app.use(express.json());
+app.use(cors())
+app.use(express.json())
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'georise-backend' });
-});
+  res.json({ status: 'ok', service: 'georise-backend' })
+})
 
-app.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`);
-});
+app.use('/auth', authRoutes)
+
+ensureSchema()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Backend running on http://localhost:${port}`)
+    })
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database', err)
+    process.exit(1)
+  })
