@@ -7,7 +7,7 @@ import CitizenDashboard from './pages/dashboard/CitizenDashboard'
 import AgencyDashboard from './pages/dashboard/AgencyDashboard'
 import AdminDashboard from './pages/dashboard/AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
-import { useAuth } from './context/AuthContext'
+import { useAuth } from './context/auth'
 
 function RoleRedirect() {
   const { user } = useAuth()
