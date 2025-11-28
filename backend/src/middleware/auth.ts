@@ -20,7 +20,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const { userId, role } = verifyToken(token)
     req.user = { id: userId, role }
     return next()
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Invalid token' })
   }
 }
