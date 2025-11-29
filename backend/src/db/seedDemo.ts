@@ -4,8 +4,7 @@ import { query, pool } from '../config/db'
 
 dotenv.config()
 
-async function seed() {
-  // seed roles ensured by init
+export async function seedDemo() {
   const adminEmail = 'admin@example.com'
   const adminPassword = 'admin123'
   const adminName = 'Demo Admin'
@@ -45,7 +44,7 @@ async function seed() {
   }
 }
 
-seed()
+seedDemo()
   .catch((err) => {
     console.error(err)
     process.exit(1)
