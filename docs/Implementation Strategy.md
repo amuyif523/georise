@@ -1304,7 +1304,7 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
   - `docker-compose.prod.yml` supports env injection (API URL, Mapbox token); deployment steps documented in `docs/DEPLOYMENT.md`.
   - Added DB indexes for status, assigned agency, and GIST on geom (`002_indexes.sql`); GIS responses capped/page-limited.
 
-### Phase H: Documentation & Demo
-- Update README/DEMO_SCRIPT with final URLs, env setup, migrations/seeds, screenshots.
-- Note optional future work (real ID API, push/WebSocket live feed) if deferred.
+### Phase H: Documentation & Demo (implemented)
+  - README updated with env setup, seeds, demo steps, and production notes; demo script refreshed with seeded creds and flows.
+  - Optional future work noted: real ID API integration, push/WebSocket live feed.
 

@@ -1,32 +1,30 @@
 # GEORISE
 
-Monorepo scaffold for the senior project.
+Full-stack incident reporting with GIS and AI classification.
 
 ## Structure
-- frontend/  (React/Vite app)
-- backend/   (API service)
-- ai-service/ (AI microservice stub)
-- infra/     (docker-compose, db init)
-- .github/   (CI workflow)
+- `frontend/` (React + Vite + Leaflet/Mapbox)
+- `backend/` (Express + Postgres/PostGIS)
+- `ai-service/` (FastAPI + sentence-transformers)
+- `infra/` (docker-compose dev/prod)
+- `.github/` (CI)
 
-## Next Steps
-- Create real `.env` from the examples in backend/, frontend/, ai-service/ before running locally.
-- In `infra/`, run `docker compose up --build` to start db + backend + frontend.
-- Add AI service stub (FastAPI) when starting Slice 4.
-- Seed demo data for Slice 1 (admin, agency, citizens) once schema exists.
+## Environment setup
+- Create `.env` in each service from the provided examples.
+  - backend: `DATABASE_URL`, `JWT_SECRET`, `AI_SERVICE_URL`, `AI_CONFIDENCE_THRESHOLD`, `ALLOWED_ORIGINS`, `BODY_LIMIT`
+  - frontend: `VITE_API_URL`, `VITE_MAPBOX_TOKEN` (optional; falls back to OSM)
+  - ai-service: port and defaults; no secrets required
+- Dev compose: `cd infra && docker compose up --build`
+- Migrate + seed: `cd backend && npm run migrate && npm run seed`
+  - Seeds: admin@example.com/admin123, staff@example.com/staff123, citizen.verified@example.com/citizen123, citizen.unverified@example.com/citizen123
 
 ## CI
-- GitHub Actions workflow runs lint + build for backend and frontend on push/PR. Current status: green.
+- GitHub Actions runs lint + test (when present) + build for backend and frontend on push/PR.
 
-## Demo Script (short)
-1) Citizen: register/login → verify ID (mock OTP) → submit incident with lat/lng → see AI classification and status history on detail.
-2) Agency staff (seeded): login → view `/agency/incidents` → open an incident → verify/assign/mark responding/resolved → watch status history and map markers.
-3) Admin (seeded): login → `/admin/summary` for counts, `/admin/users` to update verification status, `/admin/agencies` to edit agency info, `/admin/verification` to approve/reject pending requests.
+## Demo (short)
+1) Citizen: register/login → verify (mock OTP) → report incident with lat/lng → view AI classification, confidence, model version, and status history.
+2) Agency staff: login → `/agency/incidents` → open incident → verify/assign/respond/resolve → see map markers/heatmap/cluster + status history.
+3) Admin: login → `/admin/summary` for counts → `/admin/users` to update verification status → `/admin/agencies` to edit → `/admin/verification` for approvals and history.
 
-## Run Locally
-- Backend: `cd backend && npm install && npm run migrate && npm run dev`
-- Frontend: `cd frontend && npm install && npm run dev -- --host --port 3000`
-- AI service: `cd ai-service && pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 9000`
-- Compose (dev): `cd infra && docker compose up --build`
-- Seeds: `cd backend && npm run seed` (adds demo admin/incidents)
-
+## Production (compose)
+- See `docs/DEPLOYMENT.md` for env, build/run, migrations/seeds, and hardening notes.
