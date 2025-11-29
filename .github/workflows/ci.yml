@@ -23,4 +23,6 @@ jobs:
           cache-dependency-path: ${{ matrix.dir }}/package-lock.json
       - run: npm install --no-audit --no-fund
       - run: npm run lint
+      - run: |
+          if npm run | grep -q " test"; then npm test; else echo "no tests script"; fi
       - run: npm run build

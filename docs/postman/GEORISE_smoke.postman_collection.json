@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "GEORISE Smoke",
+    "_postman_id": "b6d0f6da-2f47-4fd3-9b9b-01c61c1c1111",
+    "description": "Minimal smoke flow: auth -> citizen report -> agency -> admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth Login (admin)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"identifier\": \"admin@example.com\",\n  \"password\": \"changeme\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "Citizen Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Test Citizen\",\n  \"email\": \"citizen@example.com\",\n  \"password\": \"changeme\"\n}"
+        },
+        "url": "{{baseUrl}}/citizen/register"
+      }
+    },
+    {
+      "name": "Citizen Verification Start (mock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nationalId\": \"FAKE123\",\n  \"phone\": \"+251900000000\"\n}"
+        },
+        "url": "{{baseUrl}}/citizen/verification/start"
+      }
+    },
+    {
+      "name": "Citizen Report Incident",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Smoke in the market area\",\n  \"category\": \"fire\",\n  \"lat\": 9.0108,\n  \"lng\": 38.7613\n}"
+        },
+        "url": "{{baseUrl}}/citizen/incidents"
+      }
+    },
+    {
+      "name": "Agency Incidents",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{agencyToken}}" }],
+        "url": "{{baseUrl}}/agency/incidents"
+      }
+    },
+    {
+      "name": "Admin Pending Verifications",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+        "url": "{{baseUrl}}/admin/verification/pending"
+      }
+    }
+  ],
+  "event": []
+}

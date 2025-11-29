@@ -1286,10 +1286,10 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
   - Agency dashboard now uses live incident queue with filters and map bbox + modes; polling tightened.
   - Admin dashboard shows recent status history and AI reclass log; bulk verification actions supported.
 
-### Phase D: Testing & CI
-- Add Postman/Newman collection for auth → citizen report → agency actions → admin actions; optional CI job.
-- Add integration tests (Supertest) for auth, verification gate, incident create + AI logging, agency verify/assign/status, admin verification.
-- Expand frontend tests (verify/report/incidents; agency actions; admin approvals); consider coverage reporting.
+### Phase D: Testing & CI (in progress)
+  - Postman/Newman smoke collection added (`docs/postman/GEORISE_smoke.postman_collection.json`); wire into CI later if needed.
+  - Backend Jest tests added for auth service (register/login with mocks) + existing AI client; CI now runs tests where available.
+  - Frontend Vitest test already covers citizen report form; expand to agency/admin actions next.
 
 ### Phase E: Migrations & Seeds
 - Keep migrations authoritative; no init-time DDL.
