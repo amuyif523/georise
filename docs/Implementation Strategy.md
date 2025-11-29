@@ -1291,9 +1291,9 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
   - Backend Jest tests added for auth service (register/login with mocks) + existing AI client; CI now runs tests where available.
   - Frontend Vitest test already covers citizen report form; expand to agency/admin actions next.
 
-### Phase E: Migrations & Seeds
-- Keep migrations authoritative; no init-time DDL.
-- Seed full demo: admin, agency staff, verified/unverified citizens, multiple incidents with lat/lng; document seed creds.
+### Phase E: Migrations & Seeds (implemented)
+- Migrations remain authoritative (001_init.sql); avoid init-time DDL elsewhere.
+- Seed script now creates admin, agency staff (linked to Demo Agency), verified & unverified citizens, and multiple incidents with lat/lng and geom. Demo creds logged by `npm run seed`.
 
 ### Phase F: Observability & Security
 - Add request logging with correlation IDs; basic metrics or guidance (latency/error counts).
