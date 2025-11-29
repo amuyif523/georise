@@ -21,19 +21,25 @@ export default function AgencyDashboard() {
   const { token } = useAuth()
   const [features, setFeatures] = useState<FeatureCollection['features']>([])
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState('')
+  const [category, setCategory] = useState('')
+  const [heatmap, setHeatmap] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       if (!token) return
       try {
-        const res = await api.get<FeatureCollection>('/gis/incidents', token)
+        const params = new URLSearchParams()
+        if (status) params.append('status', status)
+        if (category) params.append('category', category)
+        const res = await api.get<FeatureCollection>(`/gis/incidents?${params.toString()}`, token)
         setFeatures(res.features)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load map data')
       }
     }
     load()
-  }, [token])
+  }, [token, status, category])
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-4">
@@ -43,9 +49,42 @@ export default function AgencyDashboard() {
         <p className="text-slate-400 text-sm">Map placeholder + incident list.</p>
       </div>
 
+      <div className="flex flex-wrap gap-3 text-sm text-slate-200">
+        <select
+          className="bg-slate-800 border border-slate-700 rounded px-3 py-2"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="">Status: All</option>
+          <option value="submitted">Submitted</option>
+          <option value="verified">Verified</option>
+          <option value="assigned">Assigned</option>
+          <option value="responding">Responding</option>
+          <option value="resolved">Resolved</option>
+        </select>
+        <input
+          className="bg-slate-800 border border-slate-700 rounded px-3 py-2"
+          placeholder="Category filter"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        />
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={heatmap}
+            onChange={(e) => setHeatmap(e.target.checked)}
+          />
+          Heatmap mode
+        </label>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded border border-slate-800 bg-slate-800/60 h-72 flex items-center justify-center text-slate-400">
-          {error ? <p className="text-sm text-red-400">{error}</p> : <AgencyMap features={features} />}
+          {error ? (
+            <p className="text-sm text-red-400">{error}</p>
+          ) : (
+            <AgencyMap features={features} heatmap={heatmap} />
+          )}
         </div>
         <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">
           <h3 className="font-semibold">Incident Queue</h3>

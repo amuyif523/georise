@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -19,9 +19,10 @@ type Feature = {
 
 type Props = {
   features: Feature[]
+  heatmap?: boolean
 }
 
-export default function AgencyMap({ features }: Props) {
+export default function AgencyMap({ features, heatmap = false }: Props) {
   return (
     <div className="w-full h-72 rounded border border-slate-800 overflow-hidden">
       <MapContainer
@@ -37,6 +38,16 @@ export default function AgencyMap({ features }: Props) {
         {features.map((f) => {
           if (f.geometry.type !== 'Point') return null
           const [lng, lat] = f.geometry.coordinates
+          if (heatmap) {
+            return (
+              <Circle
+                key={f.properties.id}
+                center={[lat, lng]}
+                radius={200}
+                pathOptions={{ color: '#22d3ee', fillColor: '#22d3ee', fillOpacity: 0.25 }}
+              />
+            )
+          }
           return (
             <Marker key={f.properties.id} position={[lat, lng]} icon={markerIcon}>
               <Popup>
