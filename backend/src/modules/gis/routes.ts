@@ -11,22 +11,10 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   const category = req.query.category as string | undefined
   const from = req.query.from as string | undefined
   const to = req.query.to as string | undefined
-
-  let agencyFilter = ''
-  let agencyParams: unknown[] = []
-  if (req.user?.role === 'agency_staff') {
-    const agRows = await query<{ jurisdiction_geom: unknown }>(
-      `SELECT a.jurisdiction_geom
-       FROM agencies a
-       JOIN agency_staff s ON s.agency_id = a.id
-       WHERE s.user_id = $1`,
-      [req.user.id]
-    )
-    if (agRows[0]?.jurisdiction_geom) {
-      agencyFilter = 'AND ST_Intersects(geom, (SELECT jurisdiction_geom FROM agencies a JOIN agency_staff s ON s.agency_id = a.id WHERE s.user_id = $1 LIMIT 1))'
-      agencyParams = [req.user.id]
-    }
-  }
+  const page = Number(req.query.page ?? 1)
+  const pageSize = Number(req.query.pageSize ?? 200)
+  const limit = Math.min(Math.max(pageSize, 1), 500)
+  const offset = (Math.max(page, 1) - 1) * limit
 
   const filters: string[] = ['geom IS NOT NULL']
   const params: unknown[] = []
@@ -54,6 +42,29 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
     filters.push(`created_at <= $${params.length}`)
   }
 
+  if (req.user?.role === 'agency_staff') {
+    const hasGeom = await query<{ exists: boolean }>(
+      `SELECT EXISTS (
+        SELECT 1 FROM agencies a
+        JOIN agency_staff s ON s.agency_id = a.id
+        WHERE s.user_id = $1 AND a.jurisdiction_geom IS NOT NULL
+      ) as exists`,
+      [req.user.id]
+    )
+    if (hasGeom[0]?.exists) {
+      filters.push(
+        `ST_Intersects(geom, (
+          SELECT jurisdiction_geom
+          FROM agencies a
+          JOIN agency_staff s ON s.agency_id = a.id
+          WHERE s.user_id = $${params.length + 1}
+          LIMIT 1
+        ))`
+      )
+      params.push(req.user.id)
+    }
+  }
+
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
 
   const rows = await query<{
@@ -66,8 +77,9 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
     `SELECT id, status, category, created_at, ST_AsGeoJSON(geom) as geojson
      FROM incidents
      ${where}
-     ${agencyFilter}`,
-    [...params, ...agencyParams]
+     ORDER BY created_at DESC
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   )
 
   const features = rows

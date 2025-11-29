@@ -23,15 +23,18 @@ export default function AgencyDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
   const [category, setCategory] = useState('')
-  const [heatmap, setHeatmap] = useState(false)
+  const [viewMode, setViewMode] = useState<'markers' | 'heatmap' | 'cluster'>('markers')
+  const defaultBbox = '38.6,8.9,39.1,9.1' // Addis Ababa area; avoids loading entire globe
 
   useEffect(() => {
     const load = async () => {
       if (!token) return
       try {
         const params = new URLSearchParams()
+        params.append('bbox', defaultBbox)
         if (status) params.append('status', status)
         if (category) params.append('category', category)
+        params.append('pageSize', '300')
         const res = await api.get<FeatureCollection>(`/gis/incidents?${params.toString()}`, token)
         setFeatures(res.features)
       } catch (err) {
@@ -41,7 +44,7 @@ export default function AgencyDashboard() {
     load()
     const interval = setInterval(load, 15000)
     return () => clearInterval(interval)
-  }, [token, status, category])
+  }, [token, status, category, defaultBbox])
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-4">
@@ -70,14 +73,15 @@ export default function AgencyDashboard() {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         />
-        <label className="inline-flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={heatmap}
-            onChange={(e) => setHeatmap(e.target.checked)}
-          />
-          Heatmap mode
-        </label>
+        <select
+          className="bg-slate-800 border border-slate-700 rounded px-3 py-2"
+          value={viewMode}
+          onChange={(e) => setViewMode(e.target.value as typeof viewMode)}
+        >
+          <option value="markers">Markers</option>
+          <option value="heatmap">Heatmap</option>
+          <option value="cluster">Cluster</option>
+        </select>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -85,7 +89,7 @@ export default function AgencyDashboard() {
           {error ? (
             <p className="text-sm text-red-400">{error}</p>
           ) : (
-            <AgencyMap features={features} heatmap={heatmap} />
+            <AgencyMap features={features} mode={viewMode} />
           )}
         </div>
         <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">

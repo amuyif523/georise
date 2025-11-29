@@ -1277,10 +1277,10 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
 - Swap TF-IDF/logreg to a real model (e.g., DistilBERT/severity) in ai-service; keep `/classify` contract.
 - Tune severity/confidence thresholds; flag low-confidence in UI; log reclass history.
 
-### Phase B: GIS Maturity
-- Switch map tiles to Mapbox (using `MAPBOX_TOKEN`), keep OSM fallback if no token.
-- Add clustering/heatmap layer (Leaflet heat/cluster). Enforce bbox/filters client+server; paginate/limit GIS responses.
-- Jurisdiction filter on agency map using agency polygons; ensure map token/env is documented and wired (or stick to OSM).
+### Phase B: GIS Maturity (implemented)
+  - Map tiles now prefer Mapbox when `MAPBOX_TOKEN` is set in `frontend/.env`; OSM is the fallback.
+  - Agency map supports markers, heatmap, and basic clustering; GIS responses are bbox-aware and paginated/limited.
+  - Jurisdiction filter uses agency polygons when present; env for map token is documented.
 
 ### Phase C: Agency/Admin Polish
 - Wire agency dashboard queue to live data (replace mock list) with filters and status history display.
