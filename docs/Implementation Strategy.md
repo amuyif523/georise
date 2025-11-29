@@ -1264,3 +1264,48 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
 
 - GIS interim: store lat/lng numeric in early slices; migrate to `geometry(Point,4326)` with stable API (always return GeoJSON).
 - AI contract: `POST /ai/classify` body `{text, language?, location?, timestamp?}` → `{category, severity_score, severity_label, confidence, summary, model_version}`; if AI unavailable, backend returns safe defaults and flags `ai_status='fallback'`.
+
+## 13. From Current State to Fully Functional (Structured Plan)
+
+### Inputs you must supply up front
+- Map token if using Mapbox tiles: set `MAPBOX_TOKEN` in `frontend/.env` (Leaflet/OSM works without it).
+- TLS certs + domain for production HTTPS (configure NGINX/compose accordingly).
+- Real ID verification API keys (optional): add to `backend/.env` if moving beyond mock OTP.
+- Production admin credentials to override demo seeds.
+
+### Phase A: AI Maturity
+- Swap TF-IDF/logreg to a real model (e.g., DistilBERT/severity) in ai-service; keep `/classify` contract.
+- Tune severity/confidence thresholds; flag low-confidence in UI; log reclass history.
+
+### Phase B: GIS Maturity
+- Switch map tiles to Mapbox (using `MAPBOX_TOKEN`), keep OSM fallback if no token.
+- Add clustering/heatmap layer (Leaflet heat/cluster). Enforce bbox/filters client+server; paginate/limit GIS responses.
+- Jurisdiction filter on agency map using agency polygons; ensure map token/env is documented and wired (or stick to OSM).
+
+### Phase C: Agency/Admin Polish
+- Wire agency dashboard queue to live data (replace mock list) with filters and status history display.
+- Add WebSocket or tighter polling for incident updates.
+- Admin: richer dashboards, audit views (status history, AI reclass log), bulk verification actions.
+
+### Phase D: Testing & CI
+- Add Postman/Newman collection for auth → citizen report → agency actions → admin actions; optional CI job.
+- Add integration tests (Supertest) for auth, verification gate, incident create + AI logging, agency verify/assign/status, admin verification.
+- Expand frontend tests (verify/report/incidents; agency actions; admin approvals); consider coverage reporting.
+
+### Phase E: Migrations & Seeds
+- Keep migrations authoritative; no init-time DDL.
+- Seed full demo: admin, agency staff, verified/unverified citizens, multiple incidents with lat/lng; document seed creds.
+
+### Phase F: Observability & Security
+- Add request logging with correlation IDs; basic metrics or guidance (latency/error counts).
+- Harden CORS for prod domains; document secret management; add payload limits and rate limits where missing.
+- TLS/NGINX guidance and JWT secret rotation policy for production.
+
+### Phase G: Deployment
+- Validate `docker-compose.prod.yml` with env files; document prod deploy steps.
+- Add DB indexes for common filters (status, assigned_agency_id, geom GIST); set bbox limits and response caps on GIS endpoints.
+
+### Phase H: Documentation & Demo
+- Update README/DEMO_SCRIPT with final URLs, env setup, migrations/seeds, screenshots.
+- Note optional future work (real ID API, push/WebSocket live feed) if deferred.
+

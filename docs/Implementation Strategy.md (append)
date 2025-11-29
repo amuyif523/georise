@@ -1,0 +1,35 @@
+
+## 15. Remaining Implementation Plan (Phased)
+
+_Note: TLS/hosting steps deferred; Mapbox token is available in `frontend/.env` (`MAPBOX_TOKEN`)._
+
+### Phase A: GIS Completion
+- Implement real clustering/heatmap (Leaflet heat/cluster plugin) on agency map.
+- Enforce bbox/status/category/time filters client+server; paginate GIS responses; add bbox/response caps.
+- Jurisdiction filtering on agency map using `agencies.jurisdiction_geom`.
+
+### Phase B: Agency/Admin Polish
+- Agency dashboard: replace mock queue with live `/agency/incidents` data; add filters and status history display; keep polling or add WebSocket.
+- Admin: enrich dashboards, add audit/history views (status, AI reclass), enable bulk verification actions.
+
+### Phase C: AI (optional upgrade later)
+- Keep current TF-IDF/logreg for now. Optional later: swap to a small transformer (DistilBERT/CPU) keeping `/classify` contract; tune `AI_CONFIDENCE_THRESHOLD` and surface low-confidence flags.
+
+### Phase D: Testing & CI
+- Add Postman/Newman collection (auth → citizen report → agency actions → admin actions) and optional CI job.
+- Add integration tests (Supertest) for auth, verification gate, incident create + AI logging, agency verify/assign/status, admin verification.
+- Expand frontend tests for verify/report/incidents, agency actions, admin approvals; consider coverage reporting.
+
+### Phase E: Seeds & Data
+- Extend seeds: admin, agency staff, verified & unverified citizens, multiple incidents with lat/lng for map demos. Document seed creds.
+
+### Phase F: Observability & Security (lightweight)
+- Add request logging with correlation IDs; basic metrics or guidance.
+- Harden CORS for prod domains; add payload limits; extend rate limits where missing. (TLS steps deferred until hosting.)
+
+### Phase G: Deployment Prep (when hosting)
+- Validate `docker-compose.prod.yml` with env files.
+- Add DB indexes for common filters (status, assigned_agency_id, geom GIST).
+
+### Phase H: Docs & Demo
+- Update README/DEMO_SCRIPT with final URLs, env setup, migrations/seeds, screenshots once above is done.

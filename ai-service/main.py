@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
-app = FastAPI(title="AI Classification (Shallow Model)")
+app = FastAPI(title="AI Classification (Embedding + Logistic)")
 
 
 class ClassifyRequest(BaseModel):
@@ -35,17 +35,23 @@ TRAIN_DATA = [
     ("shooting incident assault", "crime"),
     ("injured people need medical help", "medical"),
     ("chemical spill hazardous fumes", "hazard"),
+    ("wildfire spreading fast", "fire"),
+    ("pileup on highway multiple cars", "accident"),
+    ("burglary reported with weapon", "crime"),
+    ("emergency patient not breathing", "medical"),
+    ("chemical factory leak toxic fumes", "hazard"),
 ]
 
 texts, labels = zip(*TRAIN_DATA)
-vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
-X = vectorizer.fit_transform(texts)
-clf = LogisticRegression(max_iter=200).fit(X, labels)
-MODEL_VERSION = "tfidf-logreg-v1"
+
+# CPU-friendly embedding model
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
+X = embedder.encode(list(texts))
+clf = LogisticRegression(max_iter=400).fit(X, labels)
+MODEL_VERSION = "minilm-logreg-v1"
 
 
 def severity_from_probs(probs: np.ndarray) -> float:
-    # heuristic: severity ~ 0.3 + 0.7*max_prob
     max_p = float(np.max(probs))
     return min(1.0, 0.3 + 0.7 * max_p)
 
@@ -53,7 +59,7 @@ def severity_from_probs(probs: np.ndarray) -> float:
 @app.post("/classify", response_model=ClassifyResponse)
 def classify(req: ClassifyRequest):
     text = req.text or ""
-    vec = vectorizer.transform([text])
+    vec = embedder.encode([text])
     probs = clf.predict_proba(vec)[0]
     classes = clf.classes_
     best_idx = int(np.argmax(probs))
