@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals'
+import * as db from '../config/db'
 
 jest.mock('../config/db', () => ({
   query: jest.fn(),
 }))
 
 jest.mock('bcryptjs', () => ({
-  hash: jest.fn(async () => 'hashed_pw'),
-  compare: jest.fn(async (pw: string) => pw === 'correct'),
+  hash: jest.fn(() => Promise.resolve('hashed_pw')),
+  compare: jest.fn((pw: string) => Promise.resolve(pw === 'correct')),
 }))
 
 jest.mock('jsonwebtoken', () => ({
@@ -14,13 +15,12 @@ jest.mock('jsonwebtoken', () => ({
   verify: jest.fn(() => ({ sub: '1', role: 'citizen' })),
 }))
 
-const mockQuery = jest.mocked(require('../config/db').query)
+const mockQuery = db.query as jest.MockedFunction<typeof db.query>
 let register: typeof import('../modules/auth/service').register
 let login: typeof import('../modules/auth/service').login
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-secret'
-  // import after env + mocks are set
   const svc = await import('../modules/auth/service')
   register = svc.register
   login = svc.login
