@@ -8,8 +8,11 @@ import {
   updateAgency,
   listPendingVerifications,
   reviewVerification,
+  reviewVerificationBulk,
   verificationHistory,
   adminSummary,
+  recentStatusChanges,
+  recentAiReclass,
 } from './service'
 
 const router = Router()
@@ -23,7 +26,10 @@ router.patch('/agencies/:id', ...guard, updateAgency)
 
 router.get('/verification/pending', ...guard, listPendingVerifications)
 router.patch('/verification/:id', ...guard, reviewVerification)
+router.post('/verification/bulk', ...guard, reviewVerificationBulk)
 router.get('/verification/history', ...guard, verificationHistory)
 router.get('/summary', ...guard, adminSummary)
+router.get('/incidents/history', ...guard, recentStatusChanges)
+router.get('/incidents/ai-log', ...guard, recentAiReclass)
 
 export default router

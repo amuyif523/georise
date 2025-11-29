@@ -25,6 +25,7 @@ export default function AdminVerifications() {
   const [items, setItems] = useState<Verification[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loadingId, setLoadingId] = useState<number | null>(null)
+  const [selected, setSelected] = useState<number[]>([])
   const [history, setHistory] = useState<HistoryItem[]>([])
 
   const load = useCallback(async () => {
@@ -50,8 +51,24 @@ export default function AdminVerifications() {
     try {
       await api.post(`/admin/verification/${id}`, { action }, token)
       await load()
+      setSelected((prev) => prev.filter((pid) => pid !== id))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed')
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  const bulkAct = async (action: 'approve' | 'reject') => {
+    if (!token || selected.length === 0) return
+    setError(null)
+    setLoadingId(-1)
+    try {
+      await api.post(`/admin/verification/bulk`, { ids: selected, action }, token)
+      setSelected([])
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bulk action failed')
     } finally {
       setLoadingId(null)
     }
@@ -63,6 +80,22 @@ export default function AdminVerifications() {
         <p className="text-xs uppercase tracking-[0.3em] text-cyan-400">GEORISE</p>
         <h1 className="text-2xl font-bold">Pending Verifications</h1>
       </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
+          disabled={selected.length === 0 || loadingId === -1}
+          onClick={() => bulkAct('approve')}
+        >
+          Approve Selected ({selected.length})
+        </button>
+        <button
+          className="bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
+          disabled={selected.length === 0 || loadingId === -1}
+          onClick={() => bulkAct('reject')}
+        >
+          Reject Selected ({selected.length})
+        </button>
+      </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <div className="space-y-3">
         {items.map((v) => (
@@ -71,6 +104,18 @@ export default function AdminVerifications() {
             className="rounded border border-slate-800 bg-slate-800/60 p-4 flex justify-between items-center"
           >
             <div>
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(v.id)}
+                  onChange={(e) =>
+                    setSelected((prev) =>
+                      e.target.checked ? [...prev, v.id] : prev.filter((pid) => pid !== v.id)
+                    )
+                  }
+                />
+                Select
+              </label>
               <p className="font-semibold">User #{v.user_id}</p>
               <p className="text-sm text-slate-300">National ID: {v.national_id}</p>
               <p className="text-sm text-slate-300">Phone: {v.phone || '-'}</p>

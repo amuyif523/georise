@@ -1282,10 +1282,9 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
   - Agency map supports markers, heatmap, and basic clustering; GIS responses are bbox-aware and paginated/limited.
   - Jurisdiction filter uses agency polygons when present; env for map token is documented.
 
-### Phase C: Agency/Admin Polish
-- Wire agency dashboard queue to live data (replace mock list) with filters and status history display.
-- Add WebSocket or tighter polling for incident updates.
-- Admin: richer dashboards, audit views (status history, AI reclass log), bulk verification actions.
+### Phase C: Agency/Admin Polish (implemented)
+  - Agency dashboard now uses live incident queue with filters and map bbox + modes; polling tightened.
+  - Admin dashboard shows recent status history and AI reclass log; bulk verification actions supported.
 
 ### Phase D: Testing & CI
 - Add Postman/Newman collection for auth → citizen report → agency actions → admin actions; optional CI job.

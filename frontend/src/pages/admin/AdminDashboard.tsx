@@ -5,14 +5,35 @@ import { useAuth } from '../../context/auth'
 export default function AdminDashboardPage() {
   const { token } = useAuth()
   const [summary, setSummary] = useState<{ users: number; agencies: number; incidents: number } | null>(null)
+  const [history, setHistory] = useState<
+    { id: number; incident_id: number; from_status: string | null; to_status: string; changed_at: string; category: string | null }[]
+  >([])
+  const [aiLog, setAiLog] = useState<
+    {
+      id: number
+      incident_id: number
+      model_version: string | null
+      category_pred: string | null
+      severity_score: number | null
+      severity_label: number | null
+      confidence: number | null
+      created_at: string
+    }[]
+  >([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
       if (!token) return
       try {
-        const res = await api.get<{ users: number; agencies: number; incidents: number }>('/admin/summary', token)
+        const [res, hist, ai] = await Promise.all([
+          api.get<{ users: number; agencies: number; incidents: number }>('/admin/summary', token),
+          api.get<{ history: typeof history }>('/admin/incidents/history', token),
+          api.get<{ ai: typeof aiLog }>('/admin/incidents/ai-log', token),
+        ])
         setSummary(res)
+        setHistory(hist.history || [])
+        setAiLog(ai.ai || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load summary')
       }
@@ -35,6 +56,37 @@ export default function AdminDashboardPage() {
           <StatCard title="Incidents" value={summary.incidents} />
         </div>
       )}
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-2">
+          <p className="font-semibold">Recent Status Changes</p>
+          {history.length === 0 && <p className="text-sm text-slate-400">No history yet.</p>}
+          {history.slice(0, 10).map((h) => (
+            <div key={h.id} className="text-sm text-slate-200 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
+              <p>
+                Incident #{h.incident_id} ({h.category || 'uncategorized'}) {h.from_status ?? '—'} → {h.to_status}
+              </p>
+              <p className="text-xs text-slate-500">{new Date(h.changed_at).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-2">
+          <p className="font-semibold">Recent AI Reclass Log</p>
+          {aiLog.length === 0 && <p className="text-sm text-slate-400">No AI entries yet.</p>}
+          {aiLog.slice(0, 10).map((a) => (
+            <div key={a.id} className="text-sm text-slate-200 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
+              <p>
+                Incident #{a.incident_id} → {a.category_pred || 'n/a'} (sev {a.severity_label ?? '-'} / conf{' '}
+                {a.confidence ?? '-'})
+              </p>
+              <p className="text-xs text-slate-500">
+                Model {a.model_version || 'unknown'} @ {new Date(a.created_at).toLocaleString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

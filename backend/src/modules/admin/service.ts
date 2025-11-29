@@ -91,6 +91,32 @@ export async function reviewVerification(req: Request, res: Response) {
   return res.json({ status: newStatus })
 }
 
+export async function reviewVerificationBulk(req: Request, res: Response) {
+  const { ids, action } = req.body as { ids?: number[]; action?: 'approve' | 'reject' }
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids array is required' })
+  }
+  if (!action) return res.status(400).json({ error: 'action is required' })
+
+  const verifications = await query<{ id: number; user_id: number }>(
+    `SELECT id, user_id FROM citizen_verifications WHERE id = ANY($1::int[])`,
+    [ids]
+  )
+  if (!verifications.length) return res.status(404).json({ error: 'No verifications found' })
+
+  const newStatus = action === 'approve' ? 'verified' : 'rejected'
+
+  for (const v of verifications) {
+    await query(
+      `UPDATE citizen_verifications SET status = $1, reviewed_by = $2 WHERE id = $3`,
+      [newStatus, req.user?.id ?? null, v.id]
+    )
+    await query(`UPDATE users SET verification_status = $1 WHERE id = $2`, [newStatus, v.user_id])
+  }
+
+  return res.json({ status: newStatus, count: verifications.length })
+}
+
 export async function verificationHistory(_req: Request, res: Response) {
   const rows = await query<{
     id: number
@@ -117,4 +143,41 @@ export async function adminSummary(_req: Request, res: Response) {
     agencies: Number(agenciesCount?.count ?? 0),
     incidents: Number(incidentsCount?.count ?? 0),
   })
+}
+
+export async function recentStatusChanges(_req: Request, res: Response) {
+  const rows = await query<{
+    id: number
+    incident_id: number
+    from_status: string | null
+    to_status: string
+    changed_at: Date
+    category: string | null
+  }>(
+    `SELECT h.id, h.incident_id, h.from_status, h.to_status, h.changed_at, i.category
+     FROM incident_status_history h
+     JOIN incidents i ON i.id = h.incident_id
+     ORDER BY h.changed_at DESC
+     LIMIT 25`
+  )
+  return res.json({ history: rows })
+}
+
+export async function recentAiReclass(_req: Request, res: Response) {
+  const rows = await query<{
+    id: number
+    incident_id: number
+    model_version: string | null
+    category_pred: string | null
+    severity_score: number | null
+    severity_label: number | null
+    confidence: number | null
+    created_at: Date
+  }>(
+    `SELECT id, incident_id, model_version, category_pred, severity_score, severity_label, confidence, created_at
+     FROM incident_ai_reclass
+     ORDER BY created_at DESC
+     LIMIT 25`
+  )
+  return res.json({ ai: rows })
 }

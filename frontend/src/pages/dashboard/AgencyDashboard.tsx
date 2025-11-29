@@ -19,6 +19,9 @@ const mockIncidents = [
 
 export default function AgencyDashboard() {
   const { token } = useAuth()
+  const [list, setList] = useState<
+    { id: number; description: string; status: string; category: string | null; created_at: string }[]
+  >([])
   const [features, setFeatures] = useState<FeatureCollection['features']>([])
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
@@ -30,19 +33,33 @@ export default function AgencyDashboard() {
     const load = async () => {
       if (!token) return
       try {
-        const params = new URLSearchParams()
-        params.append('bbox', defaultBbox)
-        if (status) params.append('status', status)
-        if (category) params.append('category', category)
-        params.append('pageSize', '300')
-        const res = await api.get<FeatureCollection>(`/gis/incidents?${params.toString()}`, token)
-        setFeatures(res.features)
+        const mapParams = new URLSearchParams()
+        mapParams.append('bbox', defaultBbox)
+        if (status) mapParams.append('status', status)
+        if (category) mapParams.append('category', category)
+        mapParams.append('pageSize', '300')
+
+        const listParams = new URLSearchParams()
+        if (status) listParams.append('status', status)
+        if (category) listParams.append('category', category)
+        listParams.append('pageSize', '20')
+
+        const [mapRes, listRes] = await Promise.all([
+          api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
+          api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
+            `/agency/incidents?${listParams.toString()}`,
+            token
+          ),
+        ])
+
+        setFeatures(mapRes.features)
+        setList(listRes.incidents)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load map data')
       }
     }
     load()
-    const interval = setInterval(load, 15000)
+    const interval = setInterval(load, 8000)
     return () => clearInterval(interval)
   }, [token, status, category, defaultBbox])
 
@@ -95,23 +112,29 @@ export default function AgencyDashboard() {
         <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">
           <h3 className="font-semibold">Incident Queue</h3>
           <div className="space-y-2">
-            {mockIncidents.map((inc) => (
-              <div
-                key={inc.id}
-                className="rounded border border-slate-700 bg-slate-900/50 p-3 flex justify-between"
-              >
-                <div>
-                  <p className="font-semibold capitalize">{inc.category}</p>
-                  <p className="text-xs text-slate-400">Location: {inc.location}</p>
+            {list.length === 0 ? (
+              <p className="text-sm text-slate-400">No incidents found.</p>
+            ) : (
+              list.map((inc) => (
+                <div
+                  key={inc.id}
+                  className="rounded border border-slate-700 bg-slate-900/50 p-3 flex justify-between"
+                >
+                  <div>
+                    <p className="font-semibold capitalize">{inc.category || 'Uncategorized'}</p>
+                    <p className="text-xs text-slate-400">
+                      Created: {new Date(inc.created_at).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-slate-400 line-clamp-1">{inc.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs uppercase px-2 py-1 rounded bg-slate-700 text-slate-200">
+                      {inc.status}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs uppercase px-2 py-1 rounded bg-slate-700 text-slate-200">
-                    {inc.status}
-                  </p>
-                  <p className="text-xs text-slate-300 mt-1">Severity: {inc.severity}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
