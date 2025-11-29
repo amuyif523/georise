@@ -20,6 +20,14 @@ type HistoryItem = {
   changed_at: string
 }
 
+type Recommendation = {
+  id: number
+  name: string
+  type: string | null
+  city: string | null
+  distance_km: number | null
+}
+
 export default function IncidentDetail() {
   const { id } = useParams()
   const { token } = useAuth()
@@ -28,16 +36,22 @@ export default function IncidentDetail() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [preferredType, setPreferredType] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!token || !id) return
     try {
-      const res = await api.get<{ incident: Incident; history: HistoryItem[] }>(
-        `/agency/incidents/${id}`,
-        token
-      )
+      const res = await api.get<{ incident: Incident; history: HistoryItem[] }>(`/agency/incidents/${id}`, token)
       setIncident(res.incident)
       setHistory(res.history || [])
+
+      const rec = await api.get<{ preferredType: string | null; suggestions: Recommendation[] }>(
+        `/agency/incidents/${id}/recommendations`,
+        token
+      )
+      setPreferredType(rec.preferredType)
+      setRecommendations(rec.suggestions || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load incident')
     }
@@ -87,11 +101,8 @@ export default function IncidentDetail() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-4">
-      <button
-        className="text-slate-300 hover:text-white"
-        onClick={() => navigate('/agency/incidents')}
-      >
-        ← Back to Incidents
+      <button className="text-slate-300 hover:text-white" onClick={() => navigate('/agency/incidents')}>
+        {'<-'} Back to Incidents
       </button>
       <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">
         <p className="text-xs text-slate-500">{new Date(incident.created_at).toLocaleString()}</p>
@@ -106,12 +117,9 @@ export default function IncidentDetail() {
         <div className="rounded border border-slate-800 bg-slate-900/50 p-3 space-y-2">
           <p className="font-semibold text-slate-200">Status History</p>
           {history.map((h) => (
-            <div
-              key={h.id}
-              className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0"
-            >
+            <div key={h.id} className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
               <p>
-                {h.from_status ?? '�?"'} → {h.to_status}
+              <p>{`${h.from_status ?? "-"} -> ${h.to_status}`}</p>
               </p>
               <p className="text-xs text-slate-500">{new Date(h.changed_at).toLocaleString()}</p>
             </div>
@@ -151,6 +159,41 @@ export default function IncidentDetail() {
             Mark Resolved
           </button>
         </div>
+      </div>
+
+      <div className="rounded border border-slate-800 bg-slate-900/50 p-4 space-y-2">
+        <h3 className="font-semibold">Assignment Suggestions</h3>
+        <p className="text-xs text-slate-400">
+          Preferred type: {preferredType ?? 'none'} (based on incident category). Showing nearest agencies.
+        </p>
+        {recommendations.length === 0 && <p className="text-sm text-slate-300">No suggestions available.</p>}
+        {recommendations.map((rec) => (
+          <div key={rec.id} className="border border-slate-800 rounded p-3 flex justify-between items-center">
+            <div>
+              <p className="font-semibold">{rec.name}</p>
+              <p className="text-xs text-slate-400">
+                Type: {rec.type || 'n/a'} � City: {rec.city || 'n/a'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">Distance: {rec.distance_km ?? 'n/a'} km</p>
+              <button
+                className="mt-2 text-xs bg-blue-600 hover:bg-blue-500 text-white font-semibold px-2 py-1 rounded disabled:opacity-50"
+                disabled={loading}
+                onClick={() => act('/assign-to', { agencyId: rec.id })}
+              >
+                Assign here
+              </button>
+              <button
+                className="mt-2 ml-2 text-xs border border-amber-400/60 text-amber-200 px-2 py-1 rounded hover:border-amber-300 disabled:opacity-50"
+                disabled={loading}
+                onClick={() => act('/assign-to', { agencyId: rec.id })}
+              >
+                Escalate to this agency
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

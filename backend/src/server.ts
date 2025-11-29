@@ -1,6 +1,6 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import authRoutes from './modules/auth/routes'
 import { ensureSchema } from './db/init'
 import citizenRoutes from './modules/citizen/routes'
@@ -10,8 +10,6 @@ import adminRoutes from './modules/admin/routes'
 import gisRoutes from './modules/gis/routes'
 import rateLimit from 'express-rate-limit'
 import { requestLogger, withCorrelationId } from './middleware/logger'
-
-dotenv.config()
 
 const app = express()
 const port = process.env.PORT || 8000

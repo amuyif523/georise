@@ -16,13 +16,13 @@ type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null
   token: string | null
-  login: (identifier: string, password: string) => Promise<void>
+  login: (identifier: string, password: string) => Promise<AuthUser>
   register: (
     fullName: string,
     email: string | undefined,
     phone: string | undefined,
     password: string
-  ) => Promise<void>
+  ) => Promise<AuthUser>
   logout: () => void
 }
 
@@ -59,6 +59,7 @@ function useAuthProvider() {
   const login = useCallback(async (identifier: string, password: string) => {
     const data = await api.post<{ token: string; user: AuthUser }>('/auth/login', { identifier, password })
     persist({ token: data.token, user: data.user })
+    return data.user
   }, [])
 
   const register = useCallback(
@@ -70,6 +71,7 @@ function useAuthProvider() {
         password,
       })
       persist({ token: data.token, user: data.user })
+      return data.user
     },
     []
   )

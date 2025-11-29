@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
 import AgencyMap from '../../components/AgencyMap'
@@ -13,12 +14,18 @@ type FeatureCollection = {
 }
 
 export default function AgencyDashboard() {
-  const { token } = useAuth()
+  const { token, logout } = useAuth()
+  const navigate = useNavigate()
   const [list, setList] = useState<
     { id: number; description: string; status: string; category: string | null; created_at: string }[]
   >([])
   const [features, setFeatures] = useState<FeatureCollection['features']>([])
   const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<{ total: number; byStatus: Record<string, number>; agency?: { name?: string; type?: string | null; city?: string | null } }>({
+    total: 0,
+    byStatus: {},
+    agency: undefined,
+  })
   const [status, setStatus] = useState('')
   const [category, setCategory] = useState('')
   const [viewMode, setViewMode] = useState<'markers' | 'heatmap' | 'cluster'>('markers')
@@ -39,16 +46,18 @@ export default function AgencyDashboard() {
         if (category) listParams.append('category', category)
         listParams.append('pageSize', '20')
 
-        const [mapRes, listRes] = await Promise.all([
+        const [mapRes, listRes, statsRes] = await Promise.all([
           api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
           api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
             `/agency/incidents?${listParams.toString()}`,
             token
           ),
+          api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
         ])
 
         setFeatures(mapRes.features)
         setList(listRes.incidents)
+        setStats(statsRes)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load map data')
       }
@@ -60,10 +69,23 @@ export default function AgencyDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-4">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-cyan-400">GEORISE</p>
-        <h1 className="text-2xl font-bold">Agency Dashboard</h1>
-        <p className="text-slate-400 text-sm">Map placeholder + incident list.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-cyan-400">GEORISE</p>
+          <h1 className="text-2xl font-bold">Agency Dashboard</h1>
+          <p className="text-slate-400 text-sm">
+            {stats.agency?.name ? `${stats.agency.name} (${stats.agency.type ?? 'agency'})` : 'Queue, map, and quick stats for your agency.'}
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            logout()
+            navigate('/login')
+          }}
+          className="text-sm text-slate-200 px-3 py-2 rounded border border-slate-700 hover:border-red-400 hover:text-red-200 transition"
+        >
+          Logout
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-3 text-sm text-slate-200">
@@ -94,6 +116,13 @@ export default function AgencyDashboard() {
           <option value="heatmap">Heatmap</option>
           <option value="cluster">Cluster</option>
         </select>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="Total" value={stats.total} />
+        <KpiCard label="Submitted" value={stats.byStatus['submitted'] || 0} />
+        <KpiCard label="Verified" value={stats.byStatus['verified'] || 0} />
+        <KpiCard label="Responding" value={stats.byStatus['responding'] || 0} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -133,6 +162,15 @@ export default function AgencyDashboard() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function KpiCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded border border-slate-800 bg-slate-800/60 p-3">
+      <p className="text-xs text-slate-400 uppercase">{label}</p>
+      <p className="text-2xl font-bold text-white">{value}</p>
     </div>
   )
 }

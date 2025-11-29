@@ -15,8 +15,8 @@ export default function Login() {
     setError(null)
     setLoading(true)
     try {
-      await login(identifier, password)
-      routeByRole()
+      const loggedIn = await login(identifier, password)
+      routeByRole(loggedIn?.role ?? user?.role)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -24,8 +24,7 @@ export default function Login() {
     }
   }
 
-  const routeByRole = () => {
-    const role = user?.role
+  const routeByRole = (role?: string) => {
     if (role === 'admin') navigate('/admin/dashboard')
     else if (role === 'agency_staff') navigate('/agency/dashboard')
     else navigate('/citizen/dashboard')
