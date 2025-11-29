@@ -49,6 +49,7 @@ export default function AdminUsers() {
               <th className="px-3 py-2 text-left">Email</th>
               <th className="px-3 py-2 text-left">Role</th>
               <th className="px-3 py-2 text-left">Verification</th>
+              <th className="px-3 py-2 text-left">Actions</th>
               <th className="px-3 py-2 text-left">Created</th>
             </tr>
           </thead>
@@ -59,6 +60,28 @@ export default function AdminUsers() {
                 <td className="px-3 py-2 text-slate-300">{u.email || '-'}</td>
                 <td className="px-3 py-2 capitalize">{u.role}</td>
                 <td className="px-3 py-2">{u.verificationStatus}</td>
+                <td className="px-3 py-2 space-x-2">
+                  <button
+                    className="text-xs bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded"
+                    onClick={async () => {
+                      if (!token) return
+                      await api.post(`/admin/users/${u.id}/status`, { verificationStatus: 'verified' }, token)
+                      await load()
+                    }}
+                  >
+                    Verify
+                  </button>
+                  <button
+                    className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded"
+                    onClick={async () => {
+                      if (!token) return
+                      await api.post(`/admin/users/${u.id}/status`, { verificationStatus: 'rejected' }, token)
+                      await load()
+                    }}
+                  >
+                    Reject
+                  </button>
+                </td>
                 <td className="px-3 py-2 text-slate-400 text-xs">
                   {new Date(u.created_at).toLocaleDateString()}
                 </td>

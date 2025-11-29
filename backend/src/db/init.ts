@@ -32,7 +32,8 @@ export async function ensureSchema() {
       otp_code TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      confirmed_at TIMESTAMPTZ
+      confirmed_at TIMESTAMPTZ,
+      reviewed_by INTEGER REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS incidents (

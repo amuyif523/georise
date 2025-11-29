@@ -11,17 +11,29 @@ type Verification = {
   created_at: string
 }
 
+type HistoryItem = {
+  id: number
+  user_id: number
+  national_id: string
+  status: string
+  created_at: string
+  reviewed_by: number | null
+}
+
 export default function AdminVerifications() {
   const { token } = useAuth()
   const [items, setItems] = useState<Verification[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loadingId, setLoadingId] = useState<number | null>(null)
+  const [history, setHistory] = useState<HistoryItem[]>([])
 
   const load = useCallback(async () => {
     if (!token) return
     try {
       const res = await api.get<{ verifications: Verification[] }>('/admin/verification/pending', token)
       setItems(res.verifications)
+      const hist = await api.get<{ history: HistoryItem[] }>('/admin/verification/history', token)
+      setHistory(hist.history)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load verifications')
     }
@@ -86,6 +98,19 @@ export default function AdminVerifications() {
         ))}
         {items.length === 0 && !error && (
           <p className="text-sm text-slate-400">No pending verifications.</p>
+        )}
+        {history.length > 0 && (
+          <div className="rounded border border-slate-800 bg-slate-900/50 p-3 space-y-2">
+            <p className="font-semibold">Recent Decisions</p>
+            {history.map((h) => (
+              <div key={h.id} className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
+                <p>
+                  User #{h.user_id} ID {h.national_id} → {h.status}
+                </p>
+                <p className="text-xs text-slate-500">{new Date(h.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -28,10 +28,26 @@ export async function listAgencyIncidents(req: Request, res: Response) {
     const pageSize = Number(req.query.pageSize ?? 10)
     const limit = Math.min(pageSize, 50)
     const offset = (Math.max(page, 1) - 1) * limit
+    const status = req.query.status as string | undefined
+    const category = req.query.category as string | undefined
+
+    const filters: string[] = ['assigned_agency_id = $1']
+    const params: unknown[] = [agencyId]
+    if (status) {
+      params.push(status)
+      filters.push(`status = $${params.length}`)
+    }
+    if (category) {
+      params.push(category)
+      filters.push(`category = $${params.length}`)
+    }
+    const where = `WHERE ${filters.join(' AND ')}`
 
     const rows = await query<IncidentRecord>(
-      `SELECT * FROM incidents WHERE assigned_agency_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-      [agencyId, limit, offset]
+      `SELECT * FROM incidents ${where} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${
+        params.length + 2
+      }`,
+      [...params, limit, offset]
     )
     return res.json({ incidents: rows, page, pageSize: limit })
   } catch (err) {

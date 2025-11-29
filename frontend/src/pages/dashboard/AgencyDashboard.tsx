@@ -39,6 +39,8 @@ export default function AgencyDashboard() {
       }
     }
     load()
+    const interval = setInterval(load, 15000)
+    return () => clearInterval(interval)
   }, [token, status, category])
 
   return (

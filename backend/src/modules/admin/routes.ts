@@ -8,6 +8,8 @@ import {
   updateAgency,
   listPendingVerifications,
   reviewVerification,
+  verificationHistory,
+  adminSummary,
 } from './service'
 
 const router = Router()
@@ -21,5 +23,7 @@ router.patch('/agencies/:id', ...guard, updateAgency)
 
 router.get('/verification/pending', ...guard, listPendingVerifications)
 router.patch('/verification/:id', ...guard, reviewVerification)
+router.get('/verification/history', ...guard, verificationHistory)
+router.get('/summary', ...guard, adminSummary)
 
 export default router

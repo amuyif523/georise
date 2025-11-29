@@ -81,8 +81,40 @@ export async function reviewVerification(req: Request, res: Response) {
   if (!verification) return res.status(404).json({ error: 'Verification not found' })
 
   const newStatus = action === 'approve' ? 'verified' : 'rejected'
-  await query(`UPDATE citizen_verifications SET status = $1 WHERE id = $2`, [newStatus, id])
+  await query(`UPDATE citizen_verifications SET status = $1, reviewed_by = $2 WHERE id = $3`, [
+    newStatus,
+    req.user?.id ?? null,
+    id,
+  ])
   await query(`UPDATE users SET verification_status = $1 WHERE id = $2`, [newStatus, verification.user_id])
 
   return res.json({ status: newStatus })
+}
+
+export async function verificationHistory(_req: Request, res: Response) {
+  const rows = await query<{
+    id: number
+    user_id: number
+    national_id: string
+    status: string
+    created_at: Date
+    reviewed_by: number | null
+  }>(
+    `SELECT id, user_id, national_id, status, created_at, reviewed_by
+     FROM citizen_verifications
+     WHERE status != 'pending'
+     ORDER BY created_at DESC`
+  )
+  return res.json({ history: rows })
+}
+
+export async function adminSummary(_req: Request, res: Response) {
+  const [usersCount] = await query<{ count: string }>('SELECT COUNT(*)::int as count FROM users')
+  const [agenciesCount] = await query<{ count: string }>('SELECT COUNT(*)::int as count FROM agencies')
+  const [incidentsCount] = await query<{ count: string }>('SELECT COUNT(*)::int as count FROM incidents')
+  return res.json({
+    users: Number(usersCount?.count ?? 0),
+    agencies: Number(agenciesCount?.count ?? 0),
+    incidents: Number(incidentsCount?.count ?? 0),
+  })
 }
