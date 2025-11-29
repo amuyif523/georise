@@ -87,6 +87,17 @@ export async function ensureSchema() {
       changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS incident_ai_reclass (
+      id SERIAL PRIMARY KEY,
+      incident_id INTEGER NOT NULL REFERENCES incidents(id),
+      model_version TEXT,
+      category_pred TEXT,
+      severity_score NUMERIC,
+      severity_label INTEGER,
+      confidence NUMERIC,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
 
     ALTER TABLE incidents ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
     ALTER TABLE incidents ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;

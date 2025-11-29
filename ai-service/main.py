@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+import numpy as np
 
-app = FastAPI(title="AI Classification Rule-Based Stub")
+app = FastAPI(title="AI Classification (Shallow Model)")
 
 
 class ClassifyRequest(BaseModel):
@@ -21,40 +24,49 @@ class ClassifyResponse(BaseModel):
     model_version: str
 
 
-CATEGORY_KEYWORDS = {
-    "fire": ["fire", "smoke", "burn", "flames"],
-    "accident": ["accident", "crash", "collision", "car", "vehicle"],
-    "crime": ["robbery", "assault", "theft", "gun", "knife", "crime"],
-    "medical": ["injury", "medical", "ambulance", "unconscious", "bleeding"],
-    "hazard": ["gas leak", "hazard", "chemical", "spill"],
-}
+TRAIN_DATA = [
+    ("big fire and smoke in the building", "fire"),
+    ("car accident crash on the road", "accident"),
+    ("robbery with a knife reported", "crime"),
+    ("person unconscious needs ambulance", "medical"),
+    ("gas leak chemical hazard", "hazard"),
+    ("house burning flames everywhere", "fire"),
+    ("multiple vehicles collision highway", "accident"),
+    ("shooting incident assault", "crime"),
+    ("injured people need medical help", "medical"),
+    ("chemical spill hazardous fumes", "hazard"),
+]
 
-def score_text(text: str, keywords: List[str]) -> int:
-    lower = text.lower()
-    return sum(1 for kw in keywords if kw in lower)
+texts, labels = zip(*TRAIN_DATA)
+vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
+X = vectorizer.fit_transform(texts)
+clf = LogisticRegression(max_iter=200).fit(X, labels)
+MODEL_VERSION = "tfidf-logreg-v1"
+
+
+def severity_from_probs(probs: np.ndarray) -> float:
+    # heuristic: severity ~ 0.3 + 0.7*max_prob
+    max_p = float(np.max(probs))
+    return min(1.0, 0.3 + 0.7 * max_p)
 
 
 @app.post("/classify", response_model=ClassifyResponse)
 def classify(req: ClassifyRequest):
     text = req.text or ""
-    scores = {cat: score_text(text, kws) for cat, kws in CATEGORY_KEYWORDS.items()}
-    best_cat = max(scores, key=scores.get)
-    best_score = scores[best_cat]
-    # confidence heuristic: normalized keyword hits
-    max_hits = max(1, len(CATEGORY_KEYWORDS[best_cat]))
-    confidence = round(min(0.95, 0.4 + (best_score / max_hits)), 2)
-
-    # severity heuristic: more keywords => higher severity
-    severity_score = round(min(1.0, 0.2 + best_score * 0.2), 2)
+    vec = vectorizer.transform([text])
+    probs = clf.predict_proba(vec)[0]
+    classes = clf.classes_
+    best_idx = int(np.argmax(probs))
+    category = classes[best_idx]
+    confidence = round(float(probs[best_idx]), 2)
+    severity_score = round(severity_from_probs(probs), 2)
     severity_label = max(1, min(5, int(severity_score * 5)))
-
-    summary = f"Detected {best_cat} with {best_score} keyword matches."
-
+    summary = f"Model predicts {category} with confidence {confidence}"
     return ClassifyResponse(
-        category=best_cat,
+        category=category,
         severity_score=severity_score,
         severity_label=severity_label,
         confidence=confidence,
         summary=summary,
-        model_version="rule-stub-v2",
+        model_version=MODEL_VERSION,
     )

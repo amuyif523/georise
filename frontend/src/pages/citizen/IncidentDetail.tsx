@@ -105,6 +105,7 @@ export default function IncidentDetail() {
             <p className="text-xs text-slate-200">
               Confidence: {ai.confidence} {ai.lowConfidence ? '(low)' : ''}
             </p>
+            <p className="text-xs text-slate-400">Model: {ai.model_version}</p>
             <p className="text-xs text-slate-300">Summary: {ai.summary}</p>
           </div>
         )}

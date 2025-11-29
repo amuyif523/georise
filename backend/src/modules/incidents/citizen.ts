@@ -78,6 +78,11 @@ export async function createIncident(req: Request, res: Response) {
         ai.model_version,
       ]
     )
+    await query(
+      `INSERT INTO incident_ai_reclass (incident_id, model_version, category_pred, severity_score, severity_label, confidence)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [incident.id, ai.model_version, ai.category, ai.severity_score, ai.severity_label, ai.confidence]
+    )
   }
 
   const aiMeta = ai
