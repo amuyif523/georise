@@ -12,11 +12,6 @@ type FeatureCollection = {
   }[]
 }
 
-const mockIncidents = [
-  { id: 1, category: 'fire', status: 'pending_verification', severity: 3, location: 'Bole' },
-  { id: 2, category: 'accident', status: 'submitted', severity: 2, location: 'CMC' },
-]
-
 export default function AgencyDashboard() {
   const { token } = useAuth()
   const [list, setList] = useState<
