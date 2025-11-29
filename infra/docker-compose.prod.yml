@@ -3,22 +3,18 @@ version: "3.9"
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: georise-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: georise
       POSTGRES_USER: georise
-      POSTGRES_PASSWORD: georise
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U georise -d georise"]
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   backend:
     build:
@@ -26,13 +22,19 @@ services:
       dockerfile: Dockerfile
     environment:
       PORT: 8000
-      DATABASE_URL: postgresql://georise:georise@db:5432/georise
-      JWT_SECRET: dev_secret
+      DATABASE_URL: postgresql://georise:${POSTGRES_PASSWORD}@db:5432/georise
+      JWT_SECRET: ${JWT_SECRET}
       AI_SERVICE_URL: http://ai-service:9000
       AI_CONFIDENCE_THRESHOLD: 0.5
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     ports:
       - "8000:8000"
 
@@ -41,7 +43,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: http://localhost:8000
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     depends_on:
       backend:
         condition: service_started
@@ -51,21 +53,11 @@ services:
   ai-service:
     build:
       context: ../ai-service
+      dockerfile: Dockerfile
     environment:
       PORT: 9000
     ports:
       - "9000:9000"
-
-  # ai-service:
-  #   build:
-  #     context: ../ai-service
-  #   env_file:
-  #     - ../ai-service/.env
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   ports:
-  #     - "9000:9000"
 
 volumes:
   db_data:
