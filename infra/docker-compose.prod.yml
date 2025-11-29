@@ -44,6 +44,7 @@ services:
       dockerfile: Dockerfile
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
     depends_on:
       backend:
         condition: service_started

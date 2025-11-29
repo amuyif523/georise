@@ -13,7 +13,7 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   const to = req.query.to as string | undefined
   const page = Number(req.query.page ?? 1)
   const pageSize = Number(req.query.pageSize ?? 200)
-  const limit = Math.min(Math.max(pageSize, 1), 500)
+  const limit = Math.min(Math.max(pageSize, 1), 300)
   const offset = (Math.max(page, 1) - 1) * limit
 
   const filters: string[] = ['geom IS NOT NULL']

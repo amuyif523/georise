@@ -1300,9 +1300,9 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
   - CORS hardened via `ALLOWED_ORIGINS` env; body size limited via `BODY_LIMIT`; rate limits on auth/verification/incidents remain.
   - Guidance pending: TLS/NGINX and JWT rotation (note to finalize in deployment docs).
 
-### Phase G: Deployment
-- Validate `docker-compose.prod.yml` with env files; document prod deploy steps.
-- Add DB indexes for common filters (status, assigned_agency_id, geom GIST); set bbox limits and response caps on GIS endpoints.
+### Phase G: Deployment (implemented)
+  - `docker-compose.prod.yml` supports env injection (API URL, Mapbox token); deployment steps documented in `docs/DEPLOYMENT.md`.
+  - Added DB indexes for status, assigned agency, and GIST on geom (`002_indexes.sql`); GIS responses capped/page-limited.
 
 ### Phase H: Documentation & Demo
 - Update README/DEMO_SCRIPT with final URLs, env setup, migrations/seeds, screenshots.
