@@ -1,7 +1,26 @@
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useMemo } from 'react'
+import type { Geometry, Feature as GeoJsonFeature } from 'geojson'
+
+type Feature = {
+  type: 'Feature'
+  geometry: { type: string; coordinates: [number, number] }
+  properties: { id: number; status: string; category: string | null; created_at: string }
+}
+
+type OverlayFeature = {
+  type: 'Feature'
+  geometry: Geometry
+  properties: { id: number; name: string; type: string; subtype?: string | null; metadata?: unknown }
+}
+
+type Props = {
+  features: Feature[]
+  overlays?: OverlayFeature[]
+  mode?: 'markers' | 'heatmap' | 'cluster'
+}
 
 const markerIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -12,15 +31,13 @@ const markerIcon = new L.Icon({
   shadowSize: [41, 41],
 })
 
-type Feature = {
-  type: 'Feature'
-  geometry: { type: string; coordinates: [number, number] }
-  properties: { id: number; status: string; category: string | null; created_at: string }
-}
-
-type Props = {
-  features: Feature[]
-  mode?: 'markers' | 'heatmap' | 'cluster'
+const overlayColors: Record<string, string> = {
+  hospital: '#f97316',
+  police: '#38bdf8',
+  fire: '#ef4444',
+  traffic: '#f59e0b',
+  flood: '#6366f1',
+  water: '#10b981',
 }
 
 function makeClusterIcon(count: number) {
@@ -43,14 +60,14 @@ function makeClusterIcon(count: number) {
   })
 }
 
-export default function AgencyMap({ features, mode = 'markers' }: Props) {
+export default function AgencyMap({ features, overlays = [], mode = 'markers' }: Props) {
   const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
   const tileUrl = mapboxToken
     ? `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`
     : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
   const attribution = mapboxToken
-    ? 'Â© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    : 'Â© <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+    ? '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    : '© <a href="https://www.openstreetmap.org/copyright">OSM</a>'
 
   const clusters = useMemo(() => {
     const bucket = new Map<
@@ -60,7 +77,6 @@ export default function AgencyMap({ features, mode = 'markers' }: Props) {
     features.forEach((f) => {
       if (f.geometry.type !== 'Point') return
       const [lng, lat] = f.geometry.coordinates
-      // coarse grid to cluster nearby points
       const key = `${lat.toFixed(2)}|${lng.toFixed(2)}`
       const existing = bucket.get(key)
       if (existing) {
@@ -124,6 +140,26 @@ export default function AgencyMap({ features, mode = 'markers' }: Props) {
                 </Marker>
               )
             })}
+
+        {overlays.map((f) => {
+          const color = overlayColors[f.properties.type] ?? '#22d3ee'
+          return (
+            <GeoJSON
+              key={`ov-${f.properties.id}`}
+              data={f as GeoJsonFeature}
+              style={() => ({ color, weight: 2, fillColor: color, fillOpacity: 0.25 })}
+              pointToLayer={(_, latlng) => new L.CircleMarker(latlng, { radius: 8, color, fillColor: color, fillOpacity: 0.8 })}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <p>{f.properties.name}</p>
+                  <p className="text-xs text-slate-500">Type: {f.properties.type}</p>
+                  {f.properties.subtype && <p className="text-xs text-slate-500">Subtype: {f.properties.subtype}</p>}
+                </div>
+              </Popup>
+            </GeoJSON>
+          )
+        })}
       </MapContainer>
     </div>
   )

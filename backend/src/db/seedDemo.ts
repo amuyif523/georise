@@ -139,6 +139,19 @@ export async function seedDemo() {
     )
   }
 
+  // Overlays: hospitals, police/fire stations, traffic closure (line), flood zone (polygon), water point
+  await query(
+    `INSERT INTO overlays (name, type, subtype, geom)
+     VALUES
+       ('Black Lion Hospital', 'hospital', 'tertiary', ST_SetSRID(ST_MakePoint(38.757, 9.013),4326)),
+       ('Police Station - Mexico', 'police', 'station', ST_SetSRID(ST_MakePoint(38.744, 9.010),4326)),
+       ('Fire Station - Stadium', 'fire', 'station', ST_SetSRID(ST_MakePoint(38.761, 9.016),4326)),
+       ('Traffic Closure - Bole Rd', 'traffic', 'closure', ST_GeomFromText('LINESTRING(38.77 9.01, 38.775 9.018)',4326)),
+       ('Flood Zone - River Patch', 'flood', 'zone', ST_GeomFromText('POLYGON((38.73 9.0,38.74 9.0,38.74 9.02,38.73 9.02,38.73 9.0))',4326)),
+       ('Water Point - Ayat', 'water', 'hydrant', ST_SetSRID(ST_MakePoint(38.84, 9.05),4326))
+     ON CONFLICT (name, type) DO NOTHING`
+  )
+
   console.log('Seeded demo data:')
   console.log(` admin: ${adminEmail} / ${adminPassword}`)
   agencies.forEach((ag) => console.log(` ${ag.type} staff: ${ag.staff.email} / ${ag.staff.password}`))

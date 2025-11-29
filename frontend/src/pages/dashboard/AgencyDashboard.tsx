@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { Geometry } from 'geojson'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
@@ -13,6 +14,12 @@ type FeatureCollection = {
   }[]
 }
 
+type OverlayFeature = {
+  type: 'Feature'
+  geometry: Geometry
+  properties: { id: number; name: string; type: string; subtype?: string | null; metadata?: unknown }
+}
+
 export default function AgencyDashboard() {
   const { token, logout } = useAuth()
   const navigate = useNavigate()
@@ -20,6 +27,7 @@ export default function AgencyDashboard() {
     { id: number; description: string; status: string; category: string | null; created_at: string }[]
   >([])
   const [features, setFeatures] = useState<FeatureCollection['features']>([])
+  const [overlays, setOverlays] = useState<OverlayFeature[]>([])
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<{ total: number; byStatus: Record<string, number>; agency?: { name?: string; type?: string | null; city?: string | null } }>({
     total: 0,
@@ -29,7 +37,18 @@ export default function AgencyDashboard() {
   const [status, setStatus] = useState('')
   const [category, setCategory] = useState('')
   const [viewMode, setViewMode] = useState<'markers' | 'heatmap' | 'cluster'>('markers')
+  const [overlayTypes, setOverlayTypes] = useState<string[]>(['hospital', 'police', 'fire'])
+  const [timeWindow, setTimeWindow] = useState<string>('24')
   const defaultBbox = '38.6,8.9,39.1,9.1' // Addis Ababa area; avoids loading entire globe
+
+  const timeFrom = useMemo(() => {
+    if (timeWindow === 'all') return undefined
+    const hours = Number(timeWindow)
+    if (Number.isNaN(hours)) return undefined
+    const d = new Date()
+    d.setHours(d.getHours() - hours)
+    return d.toISOString()
+  }, [timeWindow])
 
   useEffect(() => {
     const load = async () => {
@@ -39,12 +58,16 @@ export default function AgencyDashboard() {
         mapParams.append('bbox', defaultBbox)
         if (status) mapParams.append('status', status)
         if (category) mapParams.append('category', category)
+        if (timeFrom) mapParams.append('from', timeFrom)
         mapParams.append('pageSize', '300')
 
         const listParams = new URLSearchParams()
         if (status) listParams.append('status', status)
         if (category) listParams.append('category', category)
         listParams.append('pageSize', '20')
+
+        const overlayParams = new URLSearchParams()
+        if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
 
         const [mapRes, listRes, statsRes] = await Promise.all([
           api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
@@ -58,6 +81,16 @@ export default function AgencyDashboard() {
         setFeatures(mapRes.features)
         setList(listRes.incidents)
         setStats(statsRes)
+
+        if (overlayTypes.length) {
+          const overlayRes = await api.get<{ type: 'FeatureCollection'; features: OverlayFeature[] }>(
+            `/gis/overlays?${overlayParams.toString()}`,
+            token
+          )
+          setOverlays(overlayRes.features)
+        } else {
+          setOverlays([])
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load map data')
       }
@@ -65,7 +98,7 @@ export default function AgencyDashboard() {
     load()
     const interval = setInterval(load, 8000)
     return () => clearInterval(interval)
-  }, [token, status, category, defaultBbox])
+  }, [token, status, category, defaultBbox, overlayTypes, timeFrom])
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 space-y-4">
@@ -116,6 +149,15 @@ export default function AgencyDashboard() {
           <option value="heatmap">Heatmap</option>
           <option value="cluster">Cluster</option>
         </select>
+        <select
+          className="bg-slate-800 border border-slate-700 rounded px-3 py-2"
+          value={timeWindow}
+          onChange={(e) => setTimeWindow(e.target.value)}
+        >
+          <option value="24">Last 24h</option>
+          <option value="72">Last 72h</option>
+          <option value="all">All time</option>
+        </select>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -130,7 +172,7 @@ export default function AgencyDashboard() {
           {error ? (
             <p className="text-sm text-red-400">{error}</p>
           ) : (
-            <AgencyMap features={features} mode={viewMode} />
+            <AgencyMap features={features} overlays={overlays} mode={viewMode} />
           )}
         </div>
         <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">
@@ -160,6 +202,26 @@ export default function AgencyDashboard() {
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+        <h3 className="font-semibold">Map Layers</h3>
+        <p className="text-xs text-slate-400">Toggle overlays to show on the map.</p>
+        <div className="flex flex-wrap gap-3 text-sm">
+          {['hospital', 'police', 'fire', 'traffic', 'flood', 'water'].map((t) => (
+            <label key={t} className="flex items-center gap-1 cursor-pointer">
+              <input
+                type="checkbox"
+                className="accent-cyan-400"
+                checked={overlayTypes.includes(t)}
+                onChange={(e) => {
+                  setOverlayTypes((prev) => (e.target.checked ? [...prev, t] : prev.filter((p) => p !== t)))
+                }}
+              />
+              <span className="capitalize">{t}</span>
+            </label>
+          ))}
         </div>
       </div>
     </div>
