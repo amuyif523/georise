@@ -1295,10 +1295,10 @@ Assume: **Week 1 = now-ish** → **Week 14 = near final defense**.
 - Migrations remain authoritative (001_init.sql); avoid init-time DDL elsewhere.
 - Seed script now creates admin, agency staff (linked to Demo Agency), verified & unverified citizens, and multiple incidents with lat/lng and geom. Demo creds logged by `npm run seed`.
 
-### Phase F: Observability & Security
-- Add request logging with correlation IDs; basic metrics or guidance (latency/error counts).
-- Harden CORS for prod domains; document secret management; add payload limits and rate limits where missing.
-- TLS/NGINX guidance and JWT secret rotation policy for production.
+### Phase F: Observability & Security (implemented)
+  - Request logging with correlation IDs added; responses echo `x-request-id`.
+  - CORS hardened via `ALLOWED_ORIGINS` env; body size limited via `BODY_LIMIT`; rate limits on auth/verification/incidents remain.
+  - Guidance pending: TLS/NGINX and JWT rotation (note to finalize in deployment docs).
 
 ### Phase G: Deployment
 - Validate `docker-compose.prod.yml` with env files; document prod deploy steps.

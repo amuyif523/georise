@@ -9,19 +9,25 @@ import agencyIncidentRoutes from './modules/incidents/agencyRoutes'
 import adminRoutes from './modules/admin/routes'
 import gisRoutes from './modules/gis/routes'
 import rateLimit from 'express-rate-limit'
+import { requestLogger, withCorrelationId } from './middleware/logger'
 
 dotenv.config()
 
 const app = express()
 const port = process.env.PORT || 8000
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean)
+const jsonLimit = process.env.BODY_LIMIT || '1mb'
 
 app.use(
   cors({
     origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : '*',
+    credentials: true,
   })
 )
-app.use(express.json())
+app.use(withCorrelationId)
+app.use(requestLogger)
+app.use(express.json({ limit: jsonLimit }))
+app.use(express.urlencoded({ limit: jsonLimit, extended: true }))
 
 const authLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
