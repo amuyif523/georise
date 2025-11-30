@@ -18,7 +18,7 @@ function setStored(auth: StoredAuth) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(auth))
 }
 
-async function doFetch<T>(path: string, method: HttpMethod, body?: unknown, token?: string): Promise<{ res: Response; data: any }> {
+async function doFetch<T = unknown>(path: string, method: HttpMethod, body?: unknown, token?: string): Promise<{ res: Response; data: T | unknown }> {
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
