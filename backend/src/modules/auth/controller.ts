@@ -1,47 +1,27 @@
 import { Request, Response } from 'express'
-import { login, register, getUserById } from './service'
-import type { LoginInput, RegisterInput } from './types'
+import { login, register } from './service'
 
 export async function registerHandler(req: Request, res: Response) {
   try {
-    const body = req.body as RegisterInput
-    if (!body.fullName || !body.password) {
-      return res.status(400).json({ error: 'fullName and password are required' })
-    }
-    const result = await register(body)
-    return res.status(201).json({ token: result.token, user: result.user })
+    const result = await register(req.body)
+    res.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Registration failed'
-    return res.status(400).json({ error: message })
+    res.status(400).json({ error: message })
   }
 }
 
 export async function loginHandler(req: Request, res: Response) {
   try {
-    const body = req.body as LoginInput
-    if (!body.identifier || !body.password) {
-      return res.status(400).json({ error: 'identifier and password are required' })
-    }
-    const result = await login(body)
-    return res.json({ token: result.token, user: result.user })
+    const result = await login(req.body)
+    res.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Login failed'
-    return res.status(401).json({ error: message })
+    res.status(400).json({ error: message })
   }
 }
 
 export async function meHandler(req: Request, res: Response) {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-  try {
-    const user = await getUserById(req.user.id)
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' })
-    }
-    return res.json({ user })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch user'
-    return res.status(500).json({ error: message })
-  }
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
+  res.json({ user: req.user })
 }

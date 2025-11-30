@@ -1,6 +1,11 @@
 import { useEffect, useCallback, useState } from 'react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
+import Breadcrumbs from '../../components/Breadcrumbs'
+import TopNav from '../../components/TopNav'
+import CommandPalette from '../../components/CommandPalette'
+import NotificationPanel from '../../components/NotificationPanel'
+import BottomNav from '../../components/BottomNav'
 
 type Verification = {
   id: number
@@ -75,89 +80,93 @@ export default function AdminVerifications() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6 space-y-3">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-cyan-400">GEORISE</p>
-        <h1 className="text-2xl font-bold">Pending Verifications</h1>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          className="bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
-          disabled={selected.length === 0 || loadingId === -1}
-          onClick={() => bulkAct('approve')}
-        >
-          Approve Selected ({selected.length})
-        </button>
-        <button
-          className="bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
-          disabled={selected.length === 0 || loadingId === -1}
-          onClick={() => bulkAct('reject')}
-        >
-          Reject Selected ({selected.length})
-        </button>
-      </div>
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      <div className="space-y-3">
-        {items.map((v) => (
-          <div
-            key={v.id}
-            className="rounded border border-slate-800 bg-slate-800/60 p-4 flex justify-between items-center"
+    <div className="min-h-screen bg-slate-900 text-white p-0">
+      <TopNav />
+      <CommandPalette />
+      <div className="p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <Breadcrumbs />
+            <h1 className="text-2xl font-bold">Pending Verifications</h1>
+          </div>
+          <NotificationPanel />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
+            disabled={selected.length === 0 || loadingId === -1}
+            onClick={() => bulkAct('approve')}
           >
-            <div>
-              <label className="inline-flex items-center gap-2 text-xs text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(v.id)}
-                  onChange={(e) =>
-                    setSelected((prev) =>
-                      e.target.checked ? [...prev, v.id] : prev.filter((pid) => pid !== v.id)
-                    )
-                  }
-                />
-                Select
-              </label>
-              <p className="font-semibold">User #{v.user_id}</p>
-              <p className="text-sm text-slate-300">National ID: {v.national_id}</p>
-              <p className="text-sm text-slate-300">Phone: {v.phone || '-'}</p>
-              <p className="text-xs text-slate-500">
-                Requested: {new Date(v.created_at).toLocaleString()}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
-                disabled={loadingId === v.id}
-                onClick={() => act(v.id, 'approve')}
-              >
-                Approve
-              </button>
-              <button
-                className="bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
-                disabled={loadingId === v.id}
-                onClick={() => act(v.id, 'reject')}
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        ))}
-        {items.length === 0 && !error && (
-          <p className="text-sm text-slate-400">No pending verifications.</p>
-        )}
-        {history.length > 0 && (
-          <div className="rounded border border-slate-800 bg-slate-900/50 p-3 space-y-2">
-            <p className="font-semibold">Recent Decisions</p>
-            {history.map((h) => (
-              <div key={h.id} className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
-                <p>
-                  User #{h.user_id} ID {h.national_id} → {h.status}
-                </p>
-                <p className="text-xs text-slate-500">{new Date(h.created_at).toLocaleString()}</p>
+            Approve Selected ({selected.length})
+          </button>
+          <button
+            className="bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
+            disabled={selected.length === 0 || loadingId === -1}
+            onClick={() => bulkAct('reject')}
+          >
+            Reject Selected ({selected.length})
+          </button>
+        </div>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <div className="space-y-3">
+          {items.map((v) => (
+            <div
+              key={v.id}
+              className="rounded border border-slate-800 bg-slate-800/60 p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3"
+            >
+              <div>
+                <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(v.id)}
+                    onChange={(e) =>
+                      setSelected((prev) =>
+                        e.target.checked ? [...prev, v.id] : prev.filter((pid) => pid !== v.id)
+                      )
+                    }
+                  />
+                  Select
+                </label>
+                <p className="font-semibold">User #{v.user_id}</p>
+                <p className="text-sm text-slate-300">National ID: {v.national_id}</p>
+                <p className="text-sm text-slate-300">Phone: {v.phone || '-'}</p>
+                <p className="text-xs text-slate-500">Requested: {new Date(v.created_at).toLocaleString()}</p>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="flex gap-2">
+                <button
+                  className="bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
+                  disabled={loadingId === v.id}
+                  onClick={() => act(v.id, 'approve')}
+                >
+                  Approve
+                </button>
+                <button
+                  className="bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-2 rounded disabled:opacity-50"
+                  disabled={loadingId === v.id}
+                  onClick={() => act(v.id, 'reject')}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+          {items.length === 0 && !error && <p className="text-sm text-slate-400">No pending verifications.</p>}
+          {history.length > 0 && (
+            <div className="rounded border border-slate-800 bg-slate-900/50 p-3 space-y-2">
+              <p className="font-semibold">Recent Decisions</p>
+              {history.map((h) => (
+                <div key={h.id} className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
+                  <p>
+                    User #{h.user_id} ID {h.national_id} ? {h.status}
+                  </p>
+                  <p className="text-xs text-slate-500">{new Date(h.created_at).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      <BottomNav />
     </div>
   )
 }

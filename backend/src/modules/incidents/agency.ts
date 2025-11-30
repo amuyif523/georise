@@ -4,6 +4,7 @@ import type { IncidentRecord } from './types'
 import { recordStatusChange } from './history'
 import { getHistory } from './history'
 import { classifyIncident } from './aiClient'
+import { isWithinGeoFence } from '../../utils/geofence'
 const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
 type AgencyContext = {
@@ -176,6 +177,9 @@ export async function createIncidentByAgency(req: Request, res: Response) {
     lng?: number
   }
   if (!description) return res.status(400).json({ error: 'description is required' })
+  if (!isWithinGeoFence(lat, lng)) {
+    return res.status(400).json({ error: 'Incident location outside allowed area' })
+  }
   try {
     const { agencyId } = await getStaffAgency(req.user.id)
     const rows = await query<IncidentRecord>(

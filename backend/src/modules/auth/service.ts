@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'crypto'
 import { sign, verify, type JwtPayload, type Secret, type SignOptions } from 'jsonwebtoken'
 import { query } from '../../config/db'
 import type { AuthUser, LoginInput, RegisterInput, RoleRecord, UserRecord } from './types'
@@ -8,6 +9,9 @@ const SALT_ROUNDS = Number(process.env.SALT_ROUNDS || 10)
 const JWT_SECRET: Secret = process.env.JWT_SECRET || ''
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h'
 const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] }
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+
+const revokedJtis = new Set<string>()
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is required')
@@ -91,10 +95,36 @@ export async function getUserById(userId: number): Promise<AuthUser | null> {
 }
 
 export function signToken(userId: number, role: string): string {
-  return sign({ sub: userId, role }, JWT_SECRET, signOptions)
+  const jti = randomUUID()
+  return sign({ sub: userId, role, jti }, JWT_SECRET, signOptions)
 }
 
-export function verifyToken(token: string): { userId: number; role: string } {
+export function signRefreshToken(userId: number, role: string): string {
+  const jti = randomUUID()
+  return sign({ sub: userId, role, jti }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN })
+}
+
+export function revokeTokenJti(jti: string | undefined) {
+  if (jti) revokedJtis.add(jti)
+}
+
+export function verifyToken(token: string): { userId: number; role: string; jti?: string } {
   const payload = verify(token, JWT_SECRET) as JwtPayload & { role?: string }
+  if (payload.jti && revokedJtis.has(payload.jti)) throw new Error('Revoked token')
   return { userId: Number(payload.sub), role: String(payload.role) }
+}
+
+export function rotateToken(token: string): { token: string; refresh: string } | null {
+  try {
+    const payload = verify(token, JWT_SECRET) as JwtPayload & { role?: string }
+    if (payload.jti && revokedJtis.has(payload.jti)) return null
+    const userId = Number(payload.sub)
+    const role = String(payload.role)
+    const newAccess = signToken(userId, role)
+    const newRefresh = signRefreshToken(userId, role)
+    if (payload.jti) revokedJtis.add(payload.jti)
+    return { token: newAccess, refresh: newRefresh }
+  } catch {
+    return null
+  }
 }

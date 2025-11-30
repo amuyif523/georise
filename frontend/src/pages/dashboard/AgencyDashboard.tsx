@@ -8,6 +8,7 @@ import Breadcrumbs from '../../components/Breadcrumbs'
 import CommandPalette from '../../components/CommandPalette'
 import NotificationPanel from '../../components/NotificationPanel'
 import TopNav from '../../components/TopNav'
+import BottomNav from '../../components/BottomNav'
 
 type FeatureCollection = {
   type: 'FeatureCollection'
@@ -245,6 +246,7 @@ export default function AgencyDashboard() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   )
 }

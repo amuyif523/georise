@@ -4,6 +4,7 @@ import type { IncidentRecord } from './types'
 import type { UserRecord } from '../auth/types'
 import { classifyIncident } from './aiClient'
 import { recordStatusChange, getHistory } from './history'
+import { isWithinGeoFence } from '../../utils/geofence'
 
 const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
@@ -33,6 +34,9 @@ export async function createIncident(req: Request, res: Response) {
     lng?: number
   }
   if (!description) return res.status(400).json({ error: 'description is required' })
+  if (!isWithinGeoFence(lat, lng)) {
+    return res.status(400).json({ error: 'Incident location outside allowed area' })
+  }
 
   try {
     await ensureVerified(req.user.id)

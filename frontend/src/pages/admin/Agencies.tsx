@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../context/auth'
+import Breadcrumbs from '../../components/Breadcrumbs'
+import TopNav from '../../components/TopNav'
+import CommandPalette from '../../components/CommandPalette'
+import NotificationPanel from '../../components/NotificationPanel'
+import BottomNav from '../../components/BottomNav'
 
 type Agency = {
   id: number
@@ -29,11 +34,17 @@ export default function AdminAgencies() {
   }, [token])
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6 space-y-3">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-cyan-400">GEORISE</p>
-        <h1 className="text-2xl font-bold">Agencies</h1>
-      </div>
+    <div className="min-h-screen bg-slate-900 text-white p-0">
+      <TopNav />
+      <CommandPalette />
+      <div className="p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <Breadcrumbs />
+            <h1 className="text-2xl font-bold">Agencies</h1>
+          </div>
+          <NotificationPanel />
+        </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <div className="rounded border border-slate-800 bg-slate-800/60 overflow-x-auto">
         <table className="w-full text-sm">
@@ -126,6 +137,8 @@ export default function AdminAgencies() {
           </div>
         </div>
       )}
+      </div>
+      <BottomNav />
     </div>
   )
 }

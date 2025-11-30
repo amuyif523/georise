@@ -15,6 +15,10 @@ const app = express()
 const port = process.env.PORT || 8000
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean)
 const jsonLimit = process.env.BODY_LIMIT || '1mb'
+const isProd = process.env.NODE_ENV === 'production'
+if (isProd && (!allowedOrigins || allowedOrigins.length === 0)) {
+  throw new Error('ALLOWED_ORIGINS is required in production')
+}
 
 app.use(
   cors({

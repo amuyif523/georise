@@ -3,14 +3,40 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark;
+  --color-bg: #0b1220;
+  --color-surface: #111827;
+  --color-surface-2: #0f172a;
+  --color-text: #e2e8f0;
+  --color-muted: #94a3b8;
+  --color-border: #1f2937;
+  --color-primary: #06b6d4;
+  --color-accent: #f97316;
+  --color-success: #22c55e;
+  --color-warn: #f59e0b;
+  --color-error: #ef4444;
+}
+
+[data-theme='light'] {
   color-scheme: light;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f5f9;
+  --color-text: #0f172a;
+  --color-muted: #475569;
+  --color-border: #cbd5e1;
+  --color-primary: #0ea5e9;
+  --color-accent: #f97316;
+  --color-success: #16a34a;
+  --color-warn: #ea580c;
+  --color-error: #e11d48;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #0b1220;
-  color: #e2e8f0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

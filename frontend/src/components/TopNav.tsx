@@ -17,6 +17,11 @@ const NAV_ITEMS: NavItem[] = [
 export default function TopNav() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const toggleTheme = () => {
+    const root = document.documentElement
+    const current = root.getAttribute('data-theme')
+    root.setAttribute('data-theme', current === 'light' ? 'dark' : 'light')
+  }
   if (!user) return null
   const items = NAV_ITEMS.filter((i) => i.roles.includes(user.role))
   return (
@@ -31,6 +36,12 @@ export default function TopNav() {
             {item.label}
           </Link>
         ))}
+        <button
+          className="text-slate-200 px-2 py-1 rounded border border-slate-700 hover:border-cyan-400 hover:text-cyan-200 transition"
+          onClick={toggleTheme}
+        >
+          Theme
+        </button>
         <button
           className="text-slate-200 px-3 py-1 rounded border border-slate-700 hover:border-red-400 hover:text-red-200 transition"
           onClick={() => {

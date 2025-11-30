@@ -1,26 +1,10 @@
 import { useState } from 'react'
-
-type Notification = {
-  id: number
-  title: string
-  body: string
-  read: boolean
-  time: string
-}
-
-const demoNotifications: Notification[] = [
-  { id: 1, title: 'New incident assigned', body: 'Incident #12 assigned to your agency.', read: false, time: 'Now' },
-  { id: 2, title: 'AI review needed', body: 'Low-confidence classification for incident #10.', read: false, time: '5m ago' },
-  { id: 3, title: 'Status updated', body: 'Incident #5 marked resolved.', read: true, time: '1h ago' },
-]
+import { useNotifications } from '../hooks/useNotifications'
 
 export default function NotificationPanel() {
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<Notification[]>(demoNotifications)
-
+  const { items, markAllRead } = useNotifications()
   const unread = items.filter((n) => !n.read).length
-
-  const markAllRead = () => setItems((prev) => prev.map((n) => ({ ...n, read: true })))
 
   return (
     <div className="relative">
