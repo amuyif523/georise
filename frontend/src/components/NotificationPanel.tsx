@@ -13,7 +13,7 @@ export default function NotificationPanel() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Notifications"
       >
-        🔔
+        ??
         {unread > 0 && (
           <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] px-1 rounded-full">
             {unread}
@@ -37,7 +37,9 @@ export default function NotificationPanel() {
               >
                 <p className="text-sm font-semibold">{n.title}</p>
                 <p className="text-xs">{n.body}</p>
-                <p className="text-[11px] text-slate-500">{n.time}</p>
+                {n.created_at && (
+                  <p className="text-[11px] text-slate-500">{new Date(n.created_at).toLocaleString()}</p>
+                )}
               </div>
             ))}
           </div>
