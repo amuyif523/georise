@@ -16,6 +16,7 @@ type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null
   token: string | null
+  refresh: () => Promise<void>
   login: (identifier: string, password: string) => Promise<AuthUser>
   register: (
     fullName: string,
@@ -82,9 +83,20 @@ function useAuthProvider() {
     localStorage.removeItem(STORAGE_KEY)
   }, [])
 
+  const refresh = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await api.post<{ token: string; refresh: string }>('/auth/refresh', {}, token)
+      const payload: StoredAuth = { token: res.token, user: user as AuthUser }
+      persist(payload)
+    } catch {
+      logout()
+    }
+  }, [token, user, logout])
+
   const value = useMemo(
-    () => ({ user, token, login, register, logout }),
-    [user, token, login, register, logout]
+    () => ({ user, token, refresh, login, register, logout }),
+    [user, token, refresh, login, register, logout]
   )
 
   return value

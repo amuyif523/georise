@@ -7,7 +7,7 @@ This plan covers what’s left to build from the Full Feature & Excellence Check
 - GIS: no overlays (hospitals/police/fire/traffic/flood), no layer toggles/time slider/draw-polygon, no advanced queries (within X meters/critical infra/trending), no virtualized markers at scale.
 - AI: no explainability panel or AI review queue UI; routing suggestions not surfaced; stronger model options not wired; no human feedback UI.
 - UX/Navigation: theming/branding minimal; no command palette/shortcuts; breadcrumbs missing; notification center absent; mobile nav/cards missing; admin logout/menus minimal.
-- Security/Privacy: no JWT refresh/blacklist; geo-fencing not enforced; no password reset/lockout UX; ethical/privacy/threat model not surfaced; prod CORS/body limits not locked.
+- Security/Privacy (updated): JWT refresh/blacklist implemented (access/refresh rotation, logout revokes jti); geofencing enforced on incident create via `GEO_BBOX`; prod CORS/body-limit guard added (ALLOWED_ORIGINS required in prod); password reset/lockout still stub (forgot/reset endpoints only); ethical/privacy/threat model still to surface in docs; frontend refresh usage partially wired (refresh function available, not auto-called yet).
 - Notifications/Queueing: no queue/worker, no retry/DLQ, no notification center UI.
 - Performance/Scalability: no Redis/Cloudflare caching; no lazy-loading markers beyond basic caps; scalability targets not enforced.
 - Deployment/DR: backups/restore/RTO-RPO not automated; monitoring hooks absent.

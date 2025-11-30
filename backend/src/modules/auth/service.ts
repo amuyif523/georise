@@ -8,7 +8,6 @@ const DEFAULT_ROLE = 'citizen'
 const SALT_ROUNDS = Number(process.env.SALT_ROUNDS || 10)
 const JWT_SECRET: Secret = process.env.JWT_SECRET || ''
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h'
-const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] }
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'
 
 const revokedJtis = new Set<string>()
@@ -96,12 +95,12 @@ export async function getUserById(userId: number): Promise<AuthUser | null> {
 
 export function signToken(userId: number, role: string): string {
   const jti = randomUUID()
-  return sign({ sub: userId, role, jti }, JWT_SECRET, signOptions)
+  return sign({ sub: userId, role, jti }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] })
 }
 
 export function signRefreshToken(userId: number, role: string): string {
   const jti = randomUUID()
-  return sign({ sub: userId, role, jti }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN })
+  return sign({ sub: userId, role, jti }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN as SignOptions['expiresIn'] })
 }
 
 export function revokeTokenJti(jti: string | undefined) {
