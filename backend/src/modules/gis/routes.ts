@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/auth'
 import { requireRole } from '../../middleware/rbac'
 import { query } from '../../config/db'
-import type { Geometry } from 'geojson'
+
+type Geometry = unknown
 
 const router = Router()
 
@@ -114,7 +114,7 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   const features = rows
     .filter((r) => r.geojson)
     .map((r) => {
-      const geometry = JSON.parse(r.geojson as string) as unknown as Geometry
+      const geometry: Geometry = JSON.parse(r.geojson as string)
       return {
         type: 'Feature' as const,
         geometry,
@@ -159,7 +159,7 @@ router.get('/incidents/nearby', requireAuth, requireRole(['agency_staff', 'admin
   const features = rows
     .filter((r) => r.geojson)
     .map((r) => {
-      const geometry = JSON.parse(r.geojson as string) as unknown as Geometry
+      const geometry: Geometry = JSON.parse(r.geojson as string)
       return {
         type: 'Feature' as const,
         geometry,
@@ -195,7 +195,7 @@ router.get('/overlays', requireAuth, requireRole(['agency_staff', 'admin']), asy
 
   const features = rows.map((r) => ({
     type: 'Feature' as const,
-    geometry: JSON.parse(r.geojson) as unknown as Geometry,
+    geometry: JSON.parse(r.geojson) as Geometry,
     properties: {
       id: r.id,
       name: r.name,

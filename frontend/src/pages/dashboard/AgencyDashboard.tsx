@@ -176,7 +176,17 @@ export default function AgencyDashboard() {
           )}
         </div>
         <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">
-          <h3 className="font-semibold">Incident Queue</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Incident Queue</h3>
+            <div className="flex gap-3 text-xs text-slate-400">
+              <button className="underline hover:text-cyan-300" onClick={() => navigate('/agency/ai-review')}>
+                AI Review Queue
+              </button>
+              <button className="underline hover:text-cyan-300" onClick={() => navigate('/agency/report')}>
+                Field Reporting
+              </button>
+            </div>
+          </div>
           <div className="space-y-2">
             {list.length === 0 ? (
               <p className="text-sm text-slate-400">No incidents found.</p>

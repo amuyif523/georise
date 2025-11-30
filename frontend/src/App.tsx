@@ -15,6 +15,7 @@ import IncidentDetail from './pages/citizen/IncidentDetail'
 import AgencyIncidentList from './pages/agency/IncidentList'
 import AgencyIncidentDetail from './pages/agency/IncidentDetail'
 import AgencyReportIncident from './pages/agency/ReportIncident'
+import AiReview from './pages/agency/AiReview'
 
 function RoleRedirect() {
   const { user } = useAuth()
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/agency/dashboard" element={<AgencyDashboard />} />
           <Route path="/agency/incidents" element={<AgencyIncidentList />} />
           <Route path="/agency/incidents/:id" element={<AgencyIncidentDetail />} />
+          <Route path="/agency/ai-review" element={<AiReview />} />
           <Route path="/agency/report" element={<AgencyReportIncident />} />
         </Route>
 

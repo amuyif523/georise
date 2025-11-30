@@ -11,6 +11,8 @@ import {
   incidentRecommendations,
   createIncidentByAgency,
   assignIncidentTo,
+  listLowConfidence,
+  submitAiFeedback,
 } from './agency'
 
 const router = Router()
@@ -25,5 +27,7 @@ router.patch('/incidents/:id/assign-to', ...guard, assignIncidentTo)
 router.patch('/incidents/:id/status', ...guard, updateIncidentStatus)
 router.get('/stats', ...guard, agencyStats)
 router.post('/incidents', ...guard, createIncidentByAgency)
+router.get('/ai-review', ...guard, listLowConfidence)
+router.post('/incidents/:id/ai-feedback', ...guard, submitAiFeedback)
 
 export default router

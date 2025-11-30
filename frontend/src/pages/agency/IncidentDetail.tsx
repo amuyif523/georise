@@ -28,6 +28,16 @@ type Recommendation = {
   distance_km: number | null
 }
 
+type AiInfo = {
+  category: string | null
+  severity_score: number | null
+  severity_label: number | null
+  confidence: number | null
+  summary: string | null
+  model_version: string | null
+  lowConfidence?: boolean
+}
+
 export default function IncidentDetail() {
   const { id } = useParams()
   const { token } = useAuth()
@@ -38,13 +48,18 @@ export default function IncidentDetail() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [preferredType, setPreferredType] = useState<string | null>(null)
+  const [ai, setAi] = useState<AiInfo | null>(null)
 
   const load = useCallback(async () => {
     if (!token || !id) return
     try {
-      const res = await api.get<{ incident: Incident; history: HistoryItem[] }>(`/agency/incidents/${id}`, token)
+      const res = await api.get<{ incident: Incident; history: HistoryItem[]; ai: AiInfo | null }>(
+        `/agency/incidents/${id}`,
+        token
+      )
       setIncident(res.incident)
       setHistory(res.history || [])
+      setAi(res.ai || null)
 
       const rec = await api.get<{ preferredType: string | null; suggestions: Recommendation[] }>(
         `/agency/incidents/${id}/recommendations`,
@@ -113,14 +128,30 @@ export default function IncidentDetail() {
         <p className="text-slate-200 whitespace-pre-wrap">{incident.description}</p>
       </div>
 
+      {ai && (
+        <div className="rounded border border-amber-500/40 bg-amber-500/10 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-amber-200">AI Classification</p>
+            {ai.lowConfidence && (
+              <span className="text-[10px] uppercase bg-amber-500 text-slate-900 px-2 py-0.5 rounded">
+                Low confidence
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-amber-100">
+            Category: {ai.category ?? 'n/a'} · Severity: {ai.severity_label ?? 'n/a'} ({ai.severity_score ?? 'n/a'})
+          </p>
+          <p className="text-xs text-amber-200">Confidence: {ai.confidence ?? 'n/a'} · Model: {ai.model_version ?? 'n/a'}</p>
+          {ai.summary && <p className="text-xs text-slate-200">Why: {ai.summary}</p>}
+        </div>
+      )}
+
       {history.length > 0 && (
         <div className="rounded border border-slate-800 bg-slate-900/50 p-3 space-y-2">
           <p className="font-semibold text-slate-200">Status History</p>
           {history.map((h) => (
             <div key={h.id} className="text-sm text-slate-300 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
-              <p>
-              <p>{`${h.from_status ?? "-"} -> ${h.to_status}`}</p>
-              </p>
+              <p>{`${h.from_status ?? '-'} -> ${h.to_status}`}</p>
               <p className="text-xs text-slate-500">{new Date(h.changed_at).toLocaleString()}</p>
             </div>
           ))}
@@ -171,9 +202,7 @@ export default function IncidentDetail() {
           <div key={rec.id} className="border border-slate-800 rounded p-3 flex justify-between items-center">
             <div>
               <p className="font-semibold">{rec.name}</p>
-              <p className="text-xs text-slate-400">
-                Type: {rec.type || 'n/a'} · City: {rec.city || 'n/a'}
-              </p>
+              <p className="text-xs text-slate-400">Type: {rec.type || 'n/a'} · City: {rec.city || 'n/a'}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-400">Distance: {rec.distance_km ?? 'n/a'} km</p>

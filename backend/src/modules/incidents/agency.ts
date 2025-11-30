@@ -4,6 +4,7 @@ import type { IncidentRecord } from './types'
 import { recordStatusChange } from './history'
 import { getHistory } from './history'
 import { classifyIncident } from './aiClient'
+const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
 type AgencyContext = {
   agencyId: number
@@ -61,14 +62,38 @@ export async function getAgencyIncident(req: Request, res: Response) {
   const { id } = req.params
   try {
     const { agencyId } = await getStaffAgency(req.user.id)
-    const rows = await query<IncidentRecord>(
-      `SELECT * FROM incidents WHERE id = $1 AND (assigned_agency_id = $2 OR assigned_agency_id IS NULL)`,
+    const rows = await query<
+      IncidentRecord & {
+        category_pred: string | null
+        severity_score: number | null
+        severity_label: number | null
+        confidence: number | null
+        summary: string | null
+        model_version: string | null
+      }
+    >(
+      `SELECT i.*, a.category_pred, a.severity_score, a.severity_label, a.confidence, a.summary, a.model_version
+       FROM incidents i
+       LEFT JOIN incident_ai_outputs a ON a.incident_id = i.id
+       WHERE i.id = $1 AND (i.assigned_agency_id = $2 OR i.assigned_agency_id IS NULL)`,
       [id, agencyId]
     )
     const incident = rows[0]
     if (!incident) return res.status(404).json({ error: 'Not found' })
     const history = await getHistory(incident.id)
-    return res.json({ incident, history })
+    const ai =
+      incident.category_pred || incident.summary
+        ? {
+            category: incident.category_pred,
+            severity_score: incident.severity_score,
+            severity_label: incident.severity_label,
+            confidence: incident.confidence,
+            summary: incident.summary,
+            model_version: incident.model_version,
+            lowConfidence: incident.confidence !== null && incident.confidence < MIN_CONFIDENCE,
+          }
+        : null
+    return res.json({ incident, history, ai })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to fetch incident' })
   }
@@ -253,6 +278,74 @@ function mapCategoryToAgencyType(category?: string | null): string | null {
   if (c.includes('accident') || c.includes('crime') || c.includes('police')) return 'police'
   if (c.includes('medical') || c.includes('injur') || c.includes('ambulance')) return 'medical'
   return null
+}
+
+export async function listLowConfidence(req: Request, res: Response) {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
+  const limit = 50
+  const rows = await query<
+    IncidentRecord & {
+      category_pred: string | null
+      severity_score: number | null
+      severity_label: number | null
+      confidence: number | null
+      summary: string | null
+      model_version: string | null
+    }
+  >(
+    `SELECT i.*, a.category_pred, a.severity_score, a.severity_label, a.confidence, a.summary, a.model_version
+     FROM incidents i
+     LEFT JOIN incident_ai_outputs a ON a.incident_id = i.id
+     WHERE (a.confidence IS NULL OR a.confidence < $1)
+     ORDER BY i.created_at DESC
+     LIMIT $2`,
+    [MIN_CONFIDENCE, limit]
+  )
+  res.json({ incidents: rows, threshold: MIN_CONFIDENCE })
+}
+
+export async function submitAiFeedback(req: Request, res: Response) {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' })
+  const { id } = req.params
+  const { category, severity_score, severity_label, confidence, summary, model_version } = req.body as {
+    category?: string | null
+    severity_score?: number | null
+    severity_label?: number | null
+    confidence?: number | null
+    summary?: string | null
+    model_version?: string | null
+  }
+  try {
+    const incident = await query<IncidentRecord>('SELECT * FROM incidents WHERE id = $1', [id])
+    if (!incident[0]) return res.status(404).json({ error: 'Not found' })
+
+    await query(
+      `INSERT INTO incident_ai_reclass (incident_id, model_version, category_pred, severity_score, severity_label, confidence)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [incident[0].id, model_version ?? 'human_feedback', category ?? null, severity_score ?? null, severity_label ?? null, confidence ?? null]
+    )
+
+    await query(
+      `INSERT INTO incident_ai_outputs (incident_id, category_pred, severity_score, severity_label, confidence, summary, model_version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (incident_id) DO UPDATE SET
+         category_pred = EXCLUDED.category_pred,
+         severity_score = EXCLUDED.severity_score,
+         severity_label = EXCLUDED.severity_label,
+         confidence = EXCLUDED.confidence,
+         summary = EXCLUDED.summary,
+         model_version = EXCLUDED.model_version`,
+      [incident[0].id, category ?? null, severity_score ?? null, severity_label ?? null, confidence ?? null, summary ?? null, model_version ?? 'human_feedback']
+    )
+
+    if (category) {
+      await query(`UPDATE incidents SET category = $1 WHERE id = $2`, [category, incident[0].id])
+    }
+
+    res.json({ status: 'ok' })
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to submit feedback' })
+  }
 }
 
 export async function incidentRecommendations(req: Request, res: Response) {
