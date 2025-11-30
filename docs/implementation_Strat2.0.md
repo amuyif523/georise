@@ -7,7 +7,7 @@ This plan covers what’s left to build from the Full Feature & Excellence Check
 - GIS: no overlays (hospitals/police/fire/traffic/flood), no layer toggles/time slider/draw-polygon, no advanced queries (within X meters/critical infra/trending), no virtualized markers at scale.
 - AI: no explainability panel or AI review queue UI; routing suggestions not surfaced; stronger model options not wired; no human feedback UI.
 - UX/Navigation: theming/branding minimal; no command palette/shortcuts; breadcrumbs missing; notification center absent; mobile nav/cards missing; admin logout/menus minimal.
-- Security/Privacy (updated): JWT refresh/blacklist implemented (access/refresh rotation, logout revokes jti); geofencing enforced on incident create via `GEO_BBOX`; prod CORS/body-limit guard added (ALLOWED_ORIGINS required in prod); password reset/lockout still stub (forgot/reset endpoints only); ethical/privacy/threat model still to surface in docs; frontend refresh usage partially wired (refresh function available, not auto-called yet).
+- Security/Privacy (updated): JWT refresh/blacklist implemented (access rotation, logout revokes jti); geofencing enforced on incident create via `GEO_BBOX`; prod CORS/body-limit guard added (ALLOWED_ORIGINS required in prod); password reset/lockout UX stubbed (forgot/reset endpoints, login lockout hint); ethical/privacy/threat model surfaced below; frontend auto-refresh on 401 added in api client.
 - Notifications/Queueing: no queue/worker, no retry/DLQ, no notification center UI.
 - Performance/Scalability: no Redis/Cloudflare caching; no lazy-loading markers beyond basic caps; scalability targets not enforced.
 - Deployment/DR: backups/restore/RTO-RPO not automated; monitoring hooks absent.
@@ -56,3 +56,12 @@ This plan covers what’s left to build from the Full Feature & Excellence Check
 ## Execution Order
 - Work Sprints 1 → 2 → 3 → 4; Sprint 5 is stretch/perf/DR/offline once core is stable.
 - Each sprint should end with a demoable slice (UI + API + DB + tests) tied to checklist items above.
+
+## Threat Model (lite STRIDE) & Ethics/Privacy Notes
+- Spoofing (fake reports): mitigate with verification + geofence; rate limits on auth/verification/incident create.
+- Tampering (incident history): append-only history tables; avoid destructive updates to status logs.
+- Repudiation: audit status history and AI reclass logs with actor + timestamp.
+- Information Disclosure: RBAC on routes; minimal PII stored; CORS locked in prod; BODY_LIMIT enforced.
+- DoS: rate limits on auth/verification/incidents; bbox required on heavy GIS queries.
+- Elevation of Privilege: role checks on sensitive routes (admin/agency).
+- Ethics/Privacy: purpose limitation, data minimization, fairness awareness for AI outputs, human override for low-confidence AI, retention policy (archive resolved > 90 days), communicate data use to users.
