@@ -157,6 +157,21 @@ export async function seedDemo() {
   agencies.forEach((ag) => console.log(` ${ag.type} staff: ${ag.staff.email} / ${ag.staff.password}`))
   console.log(` citizen (verified): ${verifiedEmail} / ${citizenPassword}`)
   console.log(` citizen (unverified): ${unverifiedEmail} / ${citizenPassword}`)
+
+  // Seed a few notifications for demo users (admin + first agency staff)
+  const [adminUser] = await query<{ id: number }>(`SELECT id FROM users WHERE email = $1`, [adminEmail])
+  const staffUsers = await query<{ id: number }>(`SELECT id FROM users WHERE email LIKE '%staff@example.com' LIMIT 1`)
+  const demoNotifs = [
+    { userId: adminUser?.id, title: 'System', body: 'Daily summary is ready.' },
+    { userId: staffUsers[0]?.id, title: 'Incident Assigned', body: 'New incident was assigned to your agency.' },
+  ].filter((n) => n.userId)
+  for (const n of demoNotifs) {
+    await query(
+      `INSERT INTO notifications (user_id, title, body, status, attempts, max_attempts)
+       VALUES ($1, $2, $3, 'pending', 0, 3)`,
+      [n.userId, n.title, n.body]
+    )
+  }
 }
 
 // Allow standalone execution for manual seeding without affecting pool usage in-app

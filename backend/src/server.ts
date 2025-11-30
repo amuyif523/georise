@@ -8,6 +8,8 @@ import incidentRoutes from './modules/incidents/routes'
 import agencyIncidentRoutes from './modules/incidents/agencyRoutes'
 import adminRoutes from './modules/admin/routes'
 import gisRoutes from './modules/gis/routes'
+import notificationRoutes from './modules/notifications/routes'
+import { startNotificationWorker } from './modules/notifications/service'
 import rateLimit from 'express-rate-limit'
 import { requestLogger, withCorrelationId } from './middleware/logger'
 
@@ -56,9 +58,11 @@ app.use('/citizen', incidentLimiter, incidentRoutes)
 app.use('/agency', agencyIncidentRoutes)
 app.use('/admin', adminRoutes)
 app.use('/gis', gisRoutes)
+app.use('/notifications', notificationRoutes)
 
 ensureSchema()
   .then(() => {
+    startNotificationWorker()
     app.listen(port, () => {
       console.log(`Backend running on http://localhost:${port}`)
     })
