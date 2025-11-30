@@ -2,10 +2,14 @@ import { Router } from 'express'
 import { requireAuth } from '../../middleware/auth'
 import { requireRole } from '../../middleware/rbac'
 import { query } from '../../config/db'
+import { SimpleCache } from '../../utils/cache'
 
 type Geometry = unknown
 
 const router = Router()
+const gisCache = new SimpleCache<{ type: 'FeatureCollection'; features: unknown[] }>(
+  Number(process.env.GIS_CACHE_MS || 5000)
+)
 
 router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), async (req, res) => {
   const bbox = (req.query.bbox as string | undefined)?.split(',').map(Number)
@@ -96,6 +100,23 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
 
+  const cacheKey = `inc:${JSON.stringify({
+    bbox,
+    status,
+    category,
+    from,
+    to,
+    trendingHours,
+    polygon,
+    lat,
+    lng,
+    withinKm,
+    page,
+    pageSize,
+  })}`
+  const cached = gisCache.get(cacheKey)
+  if (cached) return res.json(cached)
+
   const rows = await query<{
     id: number
     status: string
@@ -127,10 +148,12 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
       }
     })
 
-  res.json({
-    type: 'FeatureCollection',
+  const payload = {
+    type: 'FeatureCollection' as const,
     features,
-  })
+  }
+  gisCache.set(cacheKey, payload)
+  res.json(payload)
 })
 
 router.get('/incidents/nearby', requireAuth, requireRole(['agency_staff', 'admin']), async (req, res) => {
