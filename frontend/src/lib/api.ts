@@ -18,7 +18,7 @@ function setStored(auth: StoredAuth) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(auth))
 }
 
-async function doFetch<T = unknown>(path: string, method: HttpMethod, body?: unknown, token?: string): Promise<{ res: Response; data: T | unknown }> {
+async function doFetch<T = unknown>(path: string, method: HttpMethod, body?: unknown, token?: string): Promise<{ res: Response; data: T | Record<string, unknown> }> {
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
@@ -27,7 +27,7 @@ async function doFetch<T = unknown>(path: string, method: HttpMethod, body?: unk
     },
     body: body ? JSON.stringify(body) : undefined,
   })
-  const data = await res.json().catch(() => ({}))
+  const data = await res.json().catch(() => ({} as Record<string, unknown>))
   return { res, data }
 }
 
@@ -37,9 +37,10 @@ async function request<T>(path: string, method: HttpMethod, body?: unknown, toke
     const stored = getStored()
     if (stored?.token) {
       const refresh = await doFetch<{ token: string; refresh: string }>('/auth/refresh', 'POST', {}, stored.token)
-      if (refresh.res.ok && refresh.data?.token) {
-        setStored({ token: refresh.data.token, user: stored.user })
-        const retry = await doFetch<T>(path, method, body, refresh.data.token)
+      if (refresh.res.ok && (refresh.data as Record<string, unknown>).token) {
+        const newToken = (refresh.data as Record<string, unknown>).token as string
+        setStored({ token: newToken, user: stored.user })
+        const retry = await doFetch<T>(path, method, body, newToken)
         if (retry.res.ok) {
           return retry.data as T
         }
@@ -47,8 +48,8 @@ async function request<T>(path: string, method: HttpMethod, body?: unknown, toke
     }
   }
   if (!res.ok) {
-    const msg = data?.error || 'Request failed'
-    throw new Error(msg)
+    const msg = (data as Record<string, unknown>).error
+    throw new Error(typeof msg === 'string' ? msg : 'Request failed')
   }
   return data as T
 }
