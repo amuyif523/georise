@@ -1,0 +1,10 @@
+type AiInfo = {
+  category: string | null
+  severity_score: number | null
+  severity_label: number | null
+  confidence: number | null
+  summary: string | null
+  model_version: string | null
+  lowConfidence?: boolean
+  configured_model?: string | null
+}

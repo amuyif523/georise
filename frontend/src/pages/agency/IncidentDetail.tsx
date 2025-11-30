@@ -36,6 +36,7 @@ type AiInfo = {
   summary: string | null
   model_version: string | null
   lowConfidence?: boolean
+  configured_model?: string | null
 }
 
 export default function IncidentDetail() {
@@ -141,7 +142,9 @@ export default function IncidentDetail() {
           <p className="text-sm text-amber-100">
             Category: {ai.category ?? 'n/a'} · Severity: {ai.severity_label ?? 'n/a'} ({ai.severity_score ?? 'n/a'})
           </p>
-          <p className="text-xs text-amber-200">Confidence: {ai.confidence ?? 'n/a'} · Model: {ai.model_version ?? 'n/a'}</p>
+          <p className="text-xs text-amber-200">
+            Confidence: {ai.confidence ?? 'n/a'} · Model: {ai.model_version ?? 'n/a'} · Configured: {ai.configured_model ?? 'n/a'}
+          </p>
           {ai.summary && <p className="text-xs text-slate-200">Why: {ai.summary}</p>}
         </div>
       )}

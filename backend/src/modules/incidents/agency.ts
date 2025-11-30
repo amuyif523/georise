@@ -91,6 +91,7 @@ export async function getAgencyIncident(req: Request, res: Response) {
             summary: incident.summary,
             model_version: incident.model_version,
             lowConfidence: incident.confidence !== null && incident.confidence < MIN_CONFIDENCE,
+            configured_model: process.env.AI_MODEL_NAME || 'stub-logreg',
           }
         : null
     return res.json({ incident, history, ai })

@@ -89,6 +89,7 @@ export async function createIncident(req: Request, res: Response) {
     ? {
         ...ai,
         lowConfidence: ai.confidence < MIN_CONFIDENCE,
+        configured_model: process.env.AI_MODEL_NAME || 'stub-logreg',
       }
     : null
 
