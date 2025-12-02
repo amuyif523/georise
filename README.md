@@ -18,6 +18,12 @@ Full-stack incident reporting with GIS and AI classification.
 - Migrate + seed: `cd backend && npm run migrate && npm run seed`
   - Seeds: admin@example.com/admin123, staff@example.com/staff123, citizen.verified@example.com/citizen123, citizen.unverified@example.com/citizen123
 
+## Caching & scaling (perf quick notes)
+- Static assets: serve via CDN (e.g., Cloudflare) with long cache headers; keep API responses short-TTL.
+- GIS GETs: require bbox, cap page size with `GIS_MAX_PAGE_SIZE`, and use short TTL via `GIS_CACHE_MS`; set `cluster=1` to get server-side clustering for large marker sets.
+- AI classify: cached briefly (`AI_CACHE_MS`, ms). Redis optional—set `REDIS_URL` to enable; otherwise in-memory cache is used.
+- Frontend map: fetches by bbox with paging and supports cluster mode; keep CDN caching on built assets enabled.
+
 ## CI
 - GitHub Actions runs lint + test (when present) + build for backend and frontend on push/PR.
 
