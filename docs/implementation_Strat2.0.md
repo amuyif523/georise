@@ -4,7 +4,7 @@ This plan covers what’s left from the Full Feature & Excellence Checklist. Fou
 
 ## Gap Checklist (fix before/during Sprint 1)
 - Agency domain: only one agency type seeded; no police/fire/medical/military differentiation; no assignment assist UI/API; no KPIs per agency type.
-- GIS: no overlays (hospitals/police/fire/traffic/flood), no layer toggles/time slider/draw-polygon, no advanced queries (within X meters/critical infra/trending), no virtualized markers at scale.
+ - GIS: overlays seeded (hospitals/police/fire/traffic/flood); layer toggles present; polygon input + click-to-draw; near filter; critical overlay filter; clustering and lazy paging added; time slider/trending hours added; still lacks full marker virtualization and map draw UI polish.
 - AI: no explainability panel or AI review queue UI; routing suggestions not surfaced; stronger model options not wired; no human feedback UI.
 - UX/Navigation: theming/branding minimal; no command palette/shortcuts; breadcrumbs missing; notification center absent; mobile nav/cards missing; admin logout/menus minimal.
 - Security/Privacy (updated): JWT refresh/blacklist implemented (access rotation, logout revokes jti); geofencing enforced on incident create via `GEO_BBOX`; prod CORS/body-limit guard added (ALLOWED_ORIGINS required in prod); password reset/lockout UX stubbed (forgot/reset endpoints, login lockout hint); ethical/privacy/threat model surfaced below; frontend auto-refresh on 401 added in api client.

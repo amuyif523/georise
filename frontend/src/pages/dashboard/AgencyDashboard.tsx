@@ -10,6 +10,7 @@ import NotificationPanel from '../../components/NotificationPanel'
 import TopNav from '../../components/TopNav'
 import BottomNav from '../../components/BottomNav'
 import { useRealtime } from '../../hooks/useRealtime'
+import { VirtualList } from '../../components/VirtualList'
 
 type FeatureCollection = {
   type: 'FeatureCollection'
@@ -54,6 +55,11 @@ export default function AgencyDashboard() {
   const [nearLng, setNearLng] = useState('')
   const [nearKm, setNearKm] = useState('1')
   const [criticalTypes, setCriticalTypes] = useState<string[]>([])
+  const [trendingHours, setTrendingHours] = useState<number>(24)
+  const [drawMode, setDrawMode] = useState(false)
+  const [drawPoints, setDrawPoints] = useState<[number, number][]>([])
+  const [forceCluster, setForceCluster] = useState(false)
+  const [showList, setShowList] = useState(false)
 
   const timeFrom = useMemo(() => {
     if (timeWindow === 'all') return undefined
@@ -75,11 +81,12 @@ export default function AgencyDashboard() {
         if (status) mapParams.append('status', status)
         if (category) mapParams.append('category', category)
         if (timeFrom) mapParams.append('from', timeFrom)
-        mapParams.append('pageSize', '200')
+      mapParams.append('pageSize', '200')
       mapParams.append('page', String(nextPage))
       if (viewMode === 'cluster') {
         mapParams.append('cluster', '1')
         mapParams.append('clusterGrid', '0.02')
+        if (forceCluster) mapParams.append('forceCluster', '1')
       }
       if (polyJson.trim()) mapParams.append('polygon', polyJson.trim())
       if (nearLat && nearLng && nearKm) {
@@ -88,6 +95,7 @@ export default function AgencyDashboard() {
         mapParams.append('withinKm', nearKm)
       }
       if (criticalTypes.length) mapParams.append('criticalTypes', criticalTypes.join(','))
+      if (trendingHours > 0) mapParams.append('trendingHours', String(trendingHours))
 
       const listParams = new URLSearchParams()
       if (status) listParams.append('status', status)
@@ -97,14 +105,14 @@ export default function AgencyDashboard() {
         const overlayParams = new URLSearchParams()
         if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
 
-        const [mapRes, listRes, statsRes] = await Promise.all([
-          api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
-          api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
-            `/agency/incidents?${listParams.toString()}`,
-            token
-          ),
-          api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
-        ])
+      const [mapRes, listRes, statsRes] = await Promise.all([
+        api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
+        api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
+          `/agency/incidents?${listParams.toString()}`,
+          token
+        ),
+        api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
+      ])
 
         const incoming = mapRes.features
         const dedup = new Map<string, FeatureCollection['features'][number]>()
@@ -137,7 +145,7 @@ export default function AgencyDashboard() {
         setIsLoading(false)
       }
     },
-    [bbox, category, features, overlayTypes, status, timeFrom, token, viewMode, mapPage]
+    [bbox, category, features, overlayTypes, status, timeFrom, token, viewMode, mapPage, polyJson, nearLat, nearLng, nearKm, criticalTypes, trendingHours, forceCluster]
   )
   useEffect(() => {
     loadData({ resetPage: true })
@@ -215,6 +223,57 @@ export default function AgencyDashboard() {
             <option value="168">Last 7 days</option>
             <option value="all">All time</option>
           </select>
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <span>Trending (hrs):</span>
+            <input
+              type="range"
+              min={0}
+              max={168}
+              step={6}
+              value={trendingHours}
+              onChange={(e) => setTrendingHours(Number(e.target.value))}
+            />
+            <span className="w-10 text-right">{trendingHours === 0 ? 'off' : `${trendingHours}h`}</span>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              className="accent-cyan-400"
+              checked={forceCluster}
+              onChange={(e) => setForceCluster(e.target.checked)}
+            />
+            <span>Force cluster mode</span>
+          </label>
+          <button
+            className={`px-3 py-2 rounded text-sm ${drawMode ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-200'}`}
+            onClick={() => {
+              setDrawMode((prev) => !prev)
+              if (!drawMode) {
+                setDrawPoints([])
+              }
+            }}
+            type="button"
+          >
+            {drawMode ? 'Finish Drawing' : 'Draw Polygon'}
+          </button>
+          <button
+            className="px-3 py-2 rounded text-sm bg-red-600 text-white disabled:opacity-50"
+            onClick={() => {
+              setDrawPoints([])
+              setPolyJson('')
+            }}
+            disabled={drawPoints.length === 0}
+            type="button"
+          >
+            Undo/Clear
+          </button>
+          <button
+            className="px-3 py-2 rounded text-sm bg-slate-700 text-slate-200"
+            type="button"
+            onClick={() => setShowList((prev) => !prev)}
+          >
+            {showList ? 'Hide virtual list' : 'Show virtual list'}
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -257,6 +316,16 @@ export default function AgencyDashboard() {
                   features={features}
                   overlays={overlays}
                   mode={viewMode}
+                  polygonPoints={drawPoints}
+                  drawMode={drawMode}
+                  onAddPoint={(pt) => {
+                    const next = [...drawPoints, pt]
+                    setDrawPoints(next)
+                    if (next.length >= 3) {
+                      const coords = [...next, next[0]]
+                      setPolyJson(JSON.stringify({ type: 'Polygon', coordinates: [coords.map(([lat, lng]) => [lng, lat])] }))
+                    }
+                  }}
                   onBoundsChange={(b) => {
                     setBbox(b.join(','))
                     setMapPage(1)
@@ -306,6 +375,29 @@ export default function AgencyDashboard() {
           </div>
         </div>
 
+        {showList && (
+          <div className="rounded border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Virtualized Incident List</h3>
+              <span className="text-xs text-slate-400">{features.length} items</span>
+            </div>
+            <VirtualList
+              items={features}
+              itemHeight={78}
+              height={260}
+              renderItem={(f) => (
+                <div className="border border-slate-800 rounded p-2 text-xs text-slate-200">
+                  <p className="font-semibold">
+                    #{f.properties.id ?? 'n/a'} {f.properties.category || 'uncat'}
+                  </p>
+                  <p>Status: {f.properties.status ?? 'unknown'}</p>
+                  <p>Created: {f.properties.created_at ? new Date(f.properties.created_at).toLocaleString() : '-'}</p>
+                </div>
+              )}
+            />
+          </div>
+        )}
+
         <div className="rounded border border-slate-800 bg-slate-900/60 p-4 space-y-3">
           <h3 className="font-semibold">Map Layers</h3>
           <p className="text-xs text-slate-400">Toggle overlays to show on the map.</p>
@@ -323,6 +415,24 @@ export default function AgencyDashboard() {
                 <span className="capitalize">{t}</span>
               </label>
             ))}
+          </div>
+          <div className="pt-3 space-y-2 text-xs text-slate-300">
+            <p className="font-semibold text-sm">Overlay Legend</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'hospital', color: '#f97316' },
+                { key: 'police', color: '#38bdf8' },
+                { key: 'fire', color: '#ef4444' },
+                { key: 'traffic', color: '#f59e0b' },
+                { key: 'flood', color: '#6366f1' },
+                { key: 'water', color: '#10b981' },
+              ].map((o) => (
+                <span key={o.key} className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: o.color }} />
+                  <span className="capitalize">{o.key}</span>
+                </span>
+              ))}
+            </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-3 text-xs text-slate-200 pt-3">
             <div className="space-y-1">

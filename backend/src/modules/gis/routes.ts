@@ -25,6 +25,7 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   const criticalKm = req.query.criticalKm ? Number(req.query.criticalKm) : 0.5
   const cluster = req.query.cluster === '1' || req.query.cluster === 'true'
   const clusterGrid = req.query.clusterGrid ? Number(req.query.clusterGrid) : 0.02
+  const forceCluster = req.query.forceCluster === '1' || req.query.forceCluster === 'true'
   const page = Number(req.query.page ?? 1)
   const pageSize = Number(req.query.pageSize ?? 200)
   const limit = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE)
@@ -211,7 +212,7 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
 
   const payload = {
     type: 'FeatureCollection' as const,
-    features,
+    features: forceCluster && features.length > 5000 ? [] : features,
   }
   await cacheSet(cacheKey, payload, GIS_CACHE_MS)
   res.json(payload)
@@ -273,7 +274,8 @@ router.get('/overlays', requireAuth, requireRole(['agency_staff', 'admin']), asy
     `SELECT id, name, type, subtype, metadata, ST_AsGeoJSON(geom) as geojson
      FROM overlays
      ${where}
-     LIMIT 500`,
+     ORDER BY id DESC
+     LIMIT 1000`,
     params
   )
 
