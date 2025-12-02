@@ -2,14 +2,13 @@ import { Router } from 'express'
 import { requireAuth } from '../../middleware/auth'
 import { requireRole } from '../../middleware/rbac'
 import { query } from '../../config/db'
-import { SimpleCache } from '../../utils/cache'
+import { cacheGet, cacheSet } from '../../utils/cacheClient'
 
 type Geometry = unknown
 
 const router = Router()
-const gisCache = new SimpleCache<{ type: 'FeatureCollection'; features: unknown[] }>(
-  Number(process.env.GIS_CACHE_MS || 5000)
-)
+const MAX_PAGE_SIZE = Math.min(Math.max(Number(process.env.GIS_MAX_PAGE_SIZE || 300), 50), 1000)
+const GIS_CACHE_MS = Number(process.env.GIS_CACHE_MS || 5000)
 
 router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), async (req, res) => {
   const bbox = (req.query.bbox as string | undefined)?.split(',').map(Number)
@@ -22,9 +21,11 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   const lat = req.query.lat ? Number(req.query.lat) : undefined
   const lng = req.query.lng ? Number(req.query.lng) : undefined
   const withinKm = req.query.withinKm ? Number(req.query.withinKm) : undefined
+  const cluster = req.query.cluster === '1' || req.query.cluster === 'true'
+  const clusterGrid = req.query.clusterGrid ? Number(req.query.clusterGrid) : 0.02
   const page = Number(req.query.page ?? 1)
   const pageSize = Number(req.query.pageSize ?? 200)
-  const limit = Math.min(Math.max(pageSize, 1), 300)
+  const limit = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE)
   const offset = (Math.max(page, 1) - 1) * limit
 
   const filters: string[] = ['geom IS NOT NULL']
@@ -111,11 +112,58 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
     lat,
     lng,
     withinKm,
+    cluster,
+    clusterGrid,
     page,
     pageSize,
   })}`
-  const cached = gisCache.get(cacheKey)
+  const cached = await cacheGet<{ type: 'FeatureCollection'; features: unknown[] }>(cacheKey)
   if (cached) return res.json(cached)
+
+  // Clustered response for large marker sets
+  if (cluster) {
+    const rows = await query<{
+      geojson: string
+      count: number
+      status: string | null
+      category: string | null
+      created_at: Date
+    }>(
+      `SELECT
+         ST_AsGeoJSON(ST_SnapToGrid(geom, $${params.length + 1}, $${params.length + 1})) as geojson,
+         COUNT(*)::int as count,
+         mode() WITHIN GROUP (ORDER BY status) as status,
+         mode() WITHIN GROUP (ORDER BY category) as category,
+         MAX(created_at) as created_at
+       FROM incidents
+       ${where}
+       GROUP BY ST_SnapToGrid(geom, $${params.length + 1}, $${params.length + 1})
+       ORDER BY count DESC
+       LIMIT $${params.length + 2} OFFSET $${params.length + 3}`,
+      [...params, clusterGrid || 0.02, limit, offset]
+    )
+
+    const features = rows
+      .filter((r) => r.geojson)
+      .map((r, idx) => {
+        const geometry: Geometry = JSON.parse(r.geojson as string)
+        return {
+          type: 'Feature' as const,
+          geometry,
+          properties: {
+            id: idx,
+            count: r.count,
+            status: r.status,
+            category: r.category,
+            created_at: r.created_at,
+          },
+        }
+      })
+
+    const payload = { type: 'FeatureCollection' as const, features }
+    await cacheSet(cacheKey, payload, GIS_CACHE_MS)
+    return res.json(payload)
+  }
 
   const rows = await query<{
     id: number
@@ -152,7 +200,7 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
     type: 'FeatureCollection' as const,
     features,
   }
-  gisCache.set(cacheKey, payload)
+  await cacheSet(cacheKey, payload, GIS_CACHE_MS)
   res.json(payload)
 })
 

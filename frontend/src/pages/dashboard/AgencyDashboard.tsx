@@ -15,7 +15,7 @@ type FeatureCollection = {
   features: {
     type: 'Feature'
     geometry: { type: string; coordinates: [number, number] }
-    properties: { id: number; status: string; category: string | null; created_at: string }
+    properties: { id?: number; status?: string; category?: string | null; created_at?: string; count?: number }
   }[]
 }
 
@@ -44,7 +44,10 @@ export default function AgencyDashboard() {
   const [viewMode, setViewMode] = useState<'markers' | 'heatmap' | 'cluster'>('markers')
   const [overlayTypes, setOverlayTypes] = useState<string[]>(['hospital', 'police', 'fire'])
   const [timeWindow, setTimeWindow] = useState<string>('24')
-  const defaultBbox = '38.6,8.9,39.1,9.1' // Addis Ababa area; avoids loading entire globe
+  const [bbox, setBbox] = useState<string>('38.6,8.9,39.1,9.1') // Addis Ababa area; avoids loading entire globe
+  const [mapPage, setMapPage] = useState(1)
+  const [mapHasMore, setMapHasMore] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const timeFrom = useMemo(() => {
     if (timeWindow === 'all') return undefined
@@ -55,55 +58,76 @@ export default function AgencyDashboard() {
     return d.toISOString()
   }, [timeWindow])
 
-  useEffect(() => {
-    const load = async () => {
-      if (!token) return
-      try {
-        const mapParams = new URLSearchParams()
-        mapParams.append('bbox', defaultBbox)
-        if (status) mapParams.append('status', status)
-        if (category) mapParams.append('category', category)
-        if (timeFrom) mapParams.append('from', timeFrom)
-        mapParams.append('pageSize', '300')
-
-        const listParams = new URLSearchParams()
-        if (status) listParams.append('status', status)
-        if (category) listParams.append('category', category)
-        listParams.append('pageSize', '20')
-
-        const overlayParams = new URLSearchParams()
-        if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
-
-        const [mapRes, listRes, statsRes] = await Promise.all([
-          api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
-          api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
-            `/agency/incidents?${listParams.toString()}`,
-            token
-          ),
-          api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
-        ])
-
-        setFeatures(mapRes.features)
-        setList(listRes.incidents)
-        setStats(statsRes)
-
-        if (overlayTypes.length) {
-          const overlayRes = await api.get<{ type: 'FeatureCollection'; features: OverlayFeature[] }>(
-            `/gis/overlays?${overlayParams.toString()}`,
-            token
-          )
-          setOverlays(overlayRes.features)
-        } else {
-          setOverlays([])
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load map data')
+  async function loadData({ resetPage = true, page }: { resetPage?: boolean; page?: number } = {}) {
+    if (!token) return
+    setIsLoading(true)
+    try {
+      const nextPage = resetPage ? 1 : page ?? mapPage
+      const mapParams = new URLSearchParams()
+      mapParams.append('bbox', bbox)
+      if (status) mapParams.append('status', status)
+      if (category) mapParams.append('category', category)
+      if (timeFrom) mapParams.append('from', timeFrom)
+      mapParams.append('pageSize', '200')
+      mapParams.append('page', String(nextPage))
+      if (viewMode === 'cluster') {
+        mapParams.append('cluster', '1')
+        mapParams.append('clusterGrid', '0.02')
       }
+
+      const listParams = new URLSearchParams()
+      if (status) listParams.append('status', status)
+      if (category) listParams.append('category', category)
+      listParams.append('pageSize', '20')
+
+      const overlayParams = new URLSearchParams()
+      if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
+
+      const [mapRes, listRes, statsRes] = await Promise.all([
+        api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
+        api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
+          `/agency/incidents?${listParams.toString()}`,
+          token
+        ),
+        api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
+      ])
+
+      const incoming = mapRes.features
+      const dedup = new Map<string, FeatureCollection['features'][number]>()
+      if (!resetPage) {
+        features.forEach((f) => dedup.set(String(f.properties.id ?? `x-${f.properties.count ?? 0}`), f))
+      } else {
+        setMapPage(1)
+      }
+      incoming.forEach((f, idx) => {
+        const key = String(f.properties.id ?? `new-${idx}-${f.properties.count ?? 0}`)
+        dedup.set(key, f)
+      })
+      setFeatures(Array.from(dedup.values()))
+      setMapHasMore(incoming.length >= 200)
+      setList(listRes.incidents)
+      setStats(statsRes)
+
+      if (overlayTypes.length) {
+        const overlayRes = await api.get<{ type: 'FeatureCollection'; features: OverlayFeature[] }>(
+          `/gis/overlays?${overlayParams.toString()}`,
+          token
+        )
+        setOverlays(overlayRes.features)
+      } else {
+        setOverlays([])
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load map data')
+    } finally {
+      setIsLoading(false)
     }
-    load()
-    const interval = setInterval(load, 8000)
-    return () => clearInterval(interval)
-  }, [token, status, category, defaultBbox, overlayTypes, timeFrom])
+  }
+
+  useEffect(() => {
+    loadData({ resetPage: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, status, category, bbox, overlayTypes, timeFrom])
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-0">
@@ -179,12 +203,46 @@ export default function AgencyDashboard() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="rounded border border-slate-800 bg-slate-800/60 h-72 flex items-center justify-center text-slate-400">
-            {error ? (
-              <p className="text-sm text-red-400">{error}</p>
-            ) : (
-              <AgencyMap features={features} overlays={overlays} mode={viewMode} />
-            )}
+          <div className="rounded border border-slate-800 bg-slate-800/60 h-72 flex flex-col text-slate-400">
+            <div className="flex items-center justify-between px-3 py-2 text-xs">
+              <span>{isLoading ? 'Loading…' : 'Viewport incidents'}</span>
+              <div className="flex gap-2">
+                <button
+                  className="px-2 py-1 rounded bg-slate-700 text-white hover:bg-slate-600"
+                  onClick={() => loadData({ resetPage: true })}
+                >
+                  Refresh
+                </button>
+                {mapHasMore && (
+                  <button
+                    className="px-2 py-1 rounded bg-cyan-600 text-white hover:bg-cyan-500"
+                    onClick={() => {
+                      const next = mapPage + 1
+                      setMapPage(next)
+                      loadData({ resetPage: false, page: next })
+                    }}
+                  >
+                    Load more
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1">
+              {error ? (
+                <p className="text-sm text-red-400 px-3">{error}</p>
+              ) : (
+                <AgencyMap
+                  features={features}
+                  overlays={overlays}
+                  mode={viewMode}
+                  onBoundsChange={(b) => {
+                    setBbox(b.join(','))
+                    setMapPage(1)
+                    setMapHasMore(false)
+                  }}
+                />
+              )}
+            </div>
           </div>
           <div className="rounded border border-slate-800 bg-slate-800/60 p-4 space-y-3">
             <div className="flex items-center justify-between">

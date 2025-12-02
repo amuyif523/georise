@@ -15,7 +15,8 @@ export class SimpleCache<T = unknown> {
     return hit.value
   }
 
-  set(key: string, value: T) {
-    this.store.set(key, { value, expires: Date.now() + this.ttlMs })
+  set(key: string, value: T, ttlOverrideMs?: number) {
+    const ttl = ttlOverrideMs ?? this.ttlMs
+    this.store.set(key, { value, expires: Date.now() + ttl })
   }
 }
