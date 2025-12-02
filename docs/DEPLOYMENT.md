@@ -47,6 +47,10 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend npm 
 - Set DB backups, strong passwords, and restricted network access.
 - Ensure `ALLOWED_ORIGINS` matches deployed domains; set `BODY_LIMIT` if needed.
 - GIS: production DB has indexes (status, assigned_agency_id, geom GIST).
+- Caching: enable Redis by setting `REDIS_URL` (optional) for AI/GIS cache; set `AI_CACHE_MS`, `GIS_CACHE_MS`, `GIS_MAX_PAGE_SIZE` to tune. Keep CDN caching on static assets (e.g., Cloudflare) with short TTLs on API/GIS.
+- Monitoring hooks: add request logging + health probes; integrate simple metrics (latency/error counts) and set up alerts on container restarts.
+- DR/Backups: schedule DB snapshots (e.g., daily) and document restore. Define targets: RPO 24h (snapshot frequency), RTO 2h (time to restore stack). Test restore into a fresh DB at least once.
+- Scalability notes: use `cluster=1` on `/gis/incidents` for very large marker sets; keep bbox required and page size capped.
 
 ### 6) Tear down
 ```

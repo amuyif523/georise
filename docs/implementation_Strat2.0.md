@@ -10,7 +10,7 @@ This plan covers what’s left from the Full Feature & Excellence Checklist. Fou
 - Security/Privacy (updated): JWT refresh/blacklist implemented (access rotation, logout revokes jti); geofencing enforced on incident create via `GEO_BBOX`; prod CORS/body-limit guard added (ALLOWED_ORIGINS required in prod); password reset/lockout UX stubbed (forgot/reset endpoints, login lockout hint); ethical/privacy/threat model surfaced below; frontend auto-refresh on 401 added in api client.
 - Notifications/Queueing: no queue/worker, no retry/DLQ, no notification center UI.
 - Performance/Scalability (in progress): in-memory GIS cache added; optional Redis cache wired (set REDIS_URL to enable); GIS requires bbox + page/limit (server cap via GIS_MAX_PAGE_SIZE); agency map lazy-loads markers with “load more” paging; Cloudflare/front-cache guidance added to README.
-- Deployment/DR: backups/restore/RTO-RPO not automated; monitoring hooks absent.
+- Deployment/DR: DR/backup plan documented; still need automation for snapshots/restore and basic monitoring hooks.
 - Testing: minimal coverage; missing GIS suite, AI threshold/fallback tests, security/bruteforce tests, Playwright E2E, Newman in CI.
 - Admin advanced: no feature flags, announcement banner, two-person approval, audit trail explorer UI.
 - Offline/WebSockets: not implemented (stretch).
