@@ -13,6 +13,14 @@ import {
   adminSummary,
   recentStatusChanges,
   recentAiReclass,
+  listFlags,
+  upsertFlag,
+  listAnnouncements,
+  upsertAnnouncement,
+  listApprovals,
+  requestApproval,
+  approveApproval,
+  auditTrail,
 } from './service'
 
 const router = Router()
@@ -31,5 +39,13 @@ router.get('/verification/history', ...guard, verificationHistory)
 router.get('/summary', ...guard, adminSummary)
 router.get('/incidents/history', ...guard, recentStatusChanges)
 router.get('/incidents/ai-log', ...guard, recentAiReclass)
+router.get('/flags', ...guard, listFlags)
+router.post('/flags', ...guard, upsertFlag)
+router.get('/announcements', ...guard, listAnnouncements)
+router.post('/announcements', ...guard, upsertAnnouncement)
+router.get('/approvals', ...guard, listApprovals)
+router.post('/approvals', ...guard, requestApproval)
+router.post('/approvals/:id/decision', ...guard, approveApproval)
+router.get('/audit', ...guard, auditTrail)
 
 export default router

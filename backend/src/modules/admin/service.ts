@@ -2,6 +2,19 @@ import { Request, Response } from 'express'
 import { query } from '../../config/db'
 import type { UserRecord } from '../auth/types'
 
+type FlagRow = { key: string; enabled: boolean; description: string | null; meta: unknown; updated_at: Date }
+type AnnouncementRow = { id: number; message: string; level: string; is_active: boolean; created_at: Date; updated_at: Date }
+type ApprovalRow = {
+  id: number
+  action: string
+  status: string
+  payload: unknown
+  requested_by: number | null
+  approved_by: number | null
+  created_at: Date
+  updated_at: Date
+}
+
 export async function listUsers(_req: Request, res: Response) {
   const rows = await query<UserRecord & { role_name: string }>(
     `SELECT u.*, r.name as role_name
@@ -180,4 +193,129 @@ export async function recentAiReclass(_req: Request, res: Response) {
      LIMIT 25`
   )
   return res.json({ ai: rows })
+}
+
+// Feature flags
+export async function listFlags(_req: Request, res: Response) {
+  const rows = await query<FlagRow>(`SELECT * FROM feature_flags ORDER BY key`)
+  return res.json({ flags: rows })
+}
+
+export async function upsertFlag(req: Request, res: Response) {
+  const { key, enabled, description, meta } = req.body as Partial<FlagRow>
+  if (!key) return res.status(400).json({ error: 'key is required' })
+  const rows = await query<FlagRow>(
+    `INSERT INTO feature_flags (key, enabled, description, meta)
+     VALUES ($1, COALESCE($2, false), $3, COALESCE($4, '{}'::jsonb))
+     ON CONFLICT (key) DO UPDATE SET
+       enabled = COALESCE(EXCLUDED.enabled, feature_flags.enabled),
+       description = COALESCE(EXCLUDED.description, feature_flags.description),
+       meta = COALESCE(EXCLUDED.meta, feature_flags.meta),
+       updated_at = NOW()
+     RETURNING *`,
+    [key, enabled ?? null, description ?? null, meta ?? null]
+  )
+  return res.json({ flag: rows[0] })
+}
+
+// Announcements
+export async function listAnnouncements(_req: Request, res: Response) {
+  const rows = await query<AnnouncementRow>(`SELECT * FROM announcements WHERE is_active = true ORDER BY created_at DESC`)
+  return res.json({ announcements: rows })
+}
+
+export async function upsertAnnouncement(req: Request, res: Response) {
+  const { id, message, level, is_active } = req.body as Partial<AnnouncementRow>
+  if (!message && !id) return res.status(400).json({ error: 'message is required when creating' })
+
+  if (id) {
+    const rows = await query<AnnouncementRow>(
+      `UPDATE announcements SET
+         message = COALESCE($1, message),
+         level = COALESCE($2, level),
+         is_active = COALESCE($3, is_active),
+         updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [message ?? null, level ?? null, is_active ?? null, id]
+    )
+    return res.json({ announcement: rows[0] })
+  }
+
+  const rows = await query<AnnouncementRow>(
+    `INSERT INTO announcements (message, level, is_active)
+     VALUES ($1, COALESCE($2, 'info'), COALESCE($3, true))
+     RETURNING *`,
+    [message, level ?? 'info', is_active ?? true]
+  )
+  return res.json({ announcement: rows[0] })
+}
+
+// Two-person approval
+export async function listApprovals(_req: Request, res: Response) {
+  const rows = await query<ApprovalRow>(
+    `SELECT * FROM admin_action_approvals
+     ORDER BY created_at DESC
+     LIMIT 50`
+  )
+  return res.json({ approvals: rows })
+}
+
+export async function requestApproval(req: Request, res: Response) {
+  const { action, payload } = req.body as { action?: string; payload?: unknown }
+  if (!action) return res.status(400).json({ error: 'action is required' })
+  const rows = await query<ApprovalRow>(
+    `INSERT INTO admin_action_approvals (action, payload, requested_by, status)
+     VALUES ($1, COALESCE($2, '{}'::jsonb), $3, 'pending')
+     ON CONFLICT (action, status) WHERE status = 'pending'
+     DO UPDATE SET payload = EXCLUDED.payload, requested_by = EXCLUDED.requested_by, updated_at = NOW()
+     RETURNING *`,
+    [action, payload ?? {}, req.user?.id ?? null]
+  )
+  await logAdminAction(req.user?.id ?? null, 'request_approval', 'admin_action_approvals', rows[0].id, payload ?? {})
+  return res.json({ approval: rows[0] })
+}
+
+export async function approveApproval(req: Request, res: Response) {
+  const { id } = req.params
+  const { decision } = req.body as { decision?: 'approved' | 'rejected' }
+  if (!decision) return res.status(400).json({ error: 'decision is required' })
+  const rows = await query<ApprovalRow>(
+    `UPDATE admin_action_approvals
+     SET status = $1, approved_by = $2, updated_at = NOW()
+     WHERE id = $3
+     RETURNING *`,
+    [decision, req.user?.id ?? null, id]
+  )
+  if (!rows.length) return res.status(404).json({ error: 'not found' })
+  await logAdminAction(req.user?.id ?? null, decision === 'approved' ? 'approve_action' : 'reject_action', 'admin_action_approvals', rows[0].id, rows[0])
+  return res.json({ approval: rows[0] })
+}
+
+// Audit trail explorer
+export async function auditTrail(_req: Request, res: Response) {
+  const rows = await query<{
+    id: number
+    actor_id: number | null
+    action: string
+    entity_type: string | null
+    entity_id: number | null
+    payload: unknown
+    created_at: Date
+  }>(`SELECT * FROM admin_audit_log ORDER BY created_at DESC LIMIT 100`)
+  return res.json({ audit: rows })
+}
+
+export async function logAdminAction(
+  actorId: number | null,
+  action: string,
+  entityType: string | null,
+  entityId: number | null,
+  payload: unknown
+) {
+  await query(
+    `INSERT INTO admin_audit_log (actor_id, action, entity_type, entity_id, payload)
+     VALUES ($1, $2, $3, $4, COALESCE($5, '{}'::jsonb))`,
+    [actorId, action, entityType, entityId, payload ?? {}]
+  )
 }
