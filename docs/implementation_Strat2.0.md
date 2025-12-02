@@ -13,7 +13,7 @@ This plan covers what’s left from the Full Feature & Excellence Checklist. Fou
 - Deployment/DR: DR/backup plan documented; backup/restore scripts added; cron guidance added. Monitoring hooks still minimal (logs/health); add metrics/alerts later.
 - Testing: minimal coverage; missing GIS suite, AI threshold/fallback tests, security/bruteforce tests, Playwright E2E, Newman in CI.
 - Admin advanced: no feature flags, announcement banner, two-person approval, audit trail explorer UI.
-- Offline/WebSockets: not implemented (stretch).
+- Offline/WebSockets: SSE endpoint added; incident/approval/announcement emits; agency map live-refreshes on incident events; citizen report has offline draft + banner. WebSockets/queued retries still stretch.
 
 ## Sprints (remaining work)
 ### Sprint 1: Agency & Domain Depth

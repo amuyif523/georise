@@ -5,6 +5,7 @@ import { recordStatusChange } from './history'
 import { getHistory } from './history'
 import { classifyIncident } from './aiClient'
 import { isWithinGeoFence } from '../../utils/geofence'
+import { emitEvent } from '../../utils/realtime'
 const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
 type AgencyContext = {
@@ -118,6 +119,7 @@ export async function verifyIncident(req: Request, res: Response) {
       [agencyId, incident.id]
     )
     await recordStatusChange(incident.id, incident.status, 'verified', req.user.id)
+    emitEvent('incident:status', { id: incident.id, to: 'verified', agencyId })
     return res.json({ status: 'verified' })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to verify incident' })
@@ -138,6 +140,7 @@ export async function assignIncident(req: Request, res: Response) {
       [agencyId, incident.id]
     )
     await recordStatusChange(incident.id, incident.status, 'assigned', req.user.id)
+    emitEvent('incident:status', { id: incident.id, to: 'assigned', agencyId })
     return res.json({ status: 'assigned' })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to assign incident' })
@@ -162,6 +165,7 @@ export async function updateIncidentStatus(req: Request, res: Response) {
 
     await query(`UPDATE incidents SET status = $1 WHERE id = $2`, [status, incident.id])
     await recordStatusChange(incident.id, incident.status, status, req.user.id)
+    emitEvent('incident:status', { id: incident.id, to: status })
     return res.json({ status })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to update status' })
@@ -209,6 +213,14 @@ export async function createIncidentByAgency(req: Request, res: Response) {
       )
     }
 
+    emitEvent('incident:new', {
+      id: incident.id,
+      status: incident.status,
+      category: incident.category,
+      created_at: incident.created_at,
+      agencyId,
+    })
+
     res.status(201).json({ incident })
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to create incident' })
@@ -233,6 +245,7 @@ export async function assignIncidentTo(req: Request, res: Response) {
       incident.id,
     ])
     await recordStatusChange(incident.id, incident.status, 'assigned', req.user.id)
+    emitEvent('incident:status', { id: incident.id, to: 'assigned', agencyId })
     res.json({ status: 'assigned', assigned_agency_id: agencyId })
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to assign incident' })

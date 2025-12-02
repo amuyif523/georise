@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { query } from '../../config/db'
+import { emitEvent } from '../../utils/realtime'
 import type { UserRecord } from '../auth/types'
 
 type FlagRow = { key: string; enabled: boolean; description: string | null; meta: unknown; updated_at: Date }
@@ -239,6 +240,7 @@ export async function upsertAnnouncement(req: Request, res: Response) {
        RETURNING *`,
       [message ?? null, level ?? null, is_active ?? null, id]
     )
+    await logAdminAction(req.user?.id ?? null, 'update_announcement', 'announcements', id, { message, level, is_active })
     return res.json({ announcement: rows[0] })
   }
 
@@ -248,6 +250,7 @@ export async function upsertAnnouncement(req: Request, res: Response) {
      RETURNING *`,
     [message, level ?? 'info', is_active ?? true]
   )
+  await logAdminAction(req.user?.id ?? null, 'create_announcement', 'announcements', rows[0].id, { message, level, is_active })
   return res.json({ announcement: rows[0] })
 }
 
@@ -273,6 +276,7 @@ export async function requestApproval(req: Request, res: Response) {
     [action, payload ?? {}, req.user?.id ?? null]
   )
   await logAdminAction(req.user?.id ?? null, 'request_approval', 'admin_action_approvals', rows[0].id, payload ?? {})
+  emitEvent('approval:pending', rows[0])
   return res.json({ approval: rows[0] })
 }
 
@@ -289,6 +293,7 @@ export async function approveApproval(req: Request, res: Response) {
   )
   if (!rows.length) return res.status(404).json({ error: 'not found' })
   await logAdminAction(req.user?.id ?? null, decision === 'approved' ? 'approve_action' : 'reject_action', 'admin_action_approvals', rows[0].id, rows[0])
+  emitEvent('approval:decision', rows[0])
   return res.json({ approval: rows[0] })
 }
 

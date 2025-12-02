@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import type { Geometry } from 'geojson'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
@@ -9,6 +9,7 @@ import CommandPalette from '../../components/CommandPalette'
 import NotificationPanel from '../../components/NotificationPanel'
 import TopNav from '../../components/TopNav'
 import BottomNav from '../../components/BottomNav'
+import { useRealtime } from '../../hooks/useRealtime'
 
 type FeatureCollection = {
   type: 'FeatureCollection'
@@ -58,76 +59,84 @@ export default function AgencyDashboard() {
     return d.toISOString()
   }, [timeWindow])
 
-  async function loadData({ resetPage = true, page }: { resetPage?: boolean; page?: number } = {}) {
-    if (!token) return
-    setIsLoading(true)
-    try {
-      const nextPage = resetPage ? 1 : page ?? mapPage
-      const mapParams = new URLSearchParams()
-      mapParams.append('bbox', bbox)
-      if (status) mapParams.append('status', status)
-      if (category) mapParams.append('category', category)
-      if (timeFrom) mapParams.append('from', timeFrom)
-      mapParams.append('pageSize', '200')
-      mapParams.append('page', String(nextPage))
-      if (viewMode === 'cluster') {
-        mapParams.append('cluster', '1')
-        mapParams.append('clusterGrid', '0.02')
+  const loadData = useCallback(
+    async ({ resetPage = true, page }: { resetPage?: boolean; page?: number } = {}) => {
+      if (!token) return
+      setIsLoading(true)
+      try {
+        const nextPage = resetPage ? 1 : page ?? mapPage
+        const mapParams = new URLSearchParams()
+        mapParams.append('bbox', bbox)
+        if (status) mapParams.append('status', status)
+        if (category) mapParams.append('category', category)
+        if (timeFrom) mapParams.append('from', timeFrom)
+        mapParams.append('pageSize', '200')
+        mapParams.append('page', String(nextPage))
+        if (viewMode === 'cluster') {
+          mapParams.append('cluster', '1')
+          mapParams.append('clusterGrid', '0.02')
+        }
+
+        const listParams = new URLSearchParams()
+        if (status) listParams.append('status', status)
+        if (category) listParams.append('category', category)
+        listParams.append('pageSize', '20')
+
+        const overlayParams = new URLSearchParams()
+        if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
+
+        const [mapRes, listRes, statsRes] = await Promise.all([
+          api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
+          api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
+            `/agency/incidents?${listParams.toString()}`,
+            token
+          ),
+          api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
+        ])
+
+        const incoming = mapRes.features
+        const dedup = new Map<string, FeatureCollection['features'][number]>()
+        if (!resetPage) {
+          features.forEach((f) => dedup.set(String(f.properties.id ?? `x-${f.properties.count ?? 0}`), f))
+        } else {
+          setMapPage(1)
+        }
+        incoming.forEach((f, idx) => {
+          const key = String(f.properties.id ?? `new-${idx}-${f.properties.count ?? 0}`)
+          dedup.set(key, f)
+        })
+        setFeatures(Array.from(dedup.values()))
+        setMapHasMore(incoming.length >= 200)
+        setList(listRes.incidents)
+        setStats(statsRes)
+
+        if (overlayTypes.length) {
+          const overlayRes = await api.get<{ type: 'FeatureCollection'; features: OverlayFeature[] }>(
+            `/gis/overlays?${overlayParams.toString()}`,
+            token
+          )
+          setOverlays(overlayRes.features)
+        } else {
+          setOverlays([])
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load map data')
+      } finally {
+        setIsLoading(false)
       }
-
-      const listParams = new URLSearchParams()
-      if (status) listParams.append('status', status)
-      if (category) listParams.append('category', category)
-      listParams.append('pageSize', '20')
-
-      const overlayParams = new URLSearchParams()
-      if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
-
-      const [mapRes, listRes, statsRes] = await Promise.all([
-        api.get<FeatureCollection>(`/gis/incidents?${mapParams.toString()}`, token),
-        api.get<{ incidents: { id: number; description: string; status: string; category: string | null; created_at: string }[] }>(
-          `/agency/incidents?${listParams.toString()}`,
-          token
-        ),
-        api.get<{ total: number; byStatus: Record<string, number> }>(`/agency/stats`, token),
-      ])
-
-      const incoming = mapRes.features
-      const dedup = new Map<string, FeatureCollection['features'][number]>()
-      if (!resetPage) {
-        features.forEach((f) => dedup.set(String(f.properties.id ?? `x-${f.properties.count ?? 0}`), f))
-      } else {
-        setMapPage(1)
-      }
-      incoming.forEach((f, idx) => {
-        const key = String(f.properties.id ?? `new-${idx}-${f.properties.count ?? 0}`)
-        dedup.set(key, f)
-      })
-      setFeatures(Array.from(dedup.values()))
-      setMapHasMore(incoming.length >= 200)
-      setList(listRes.incidents)
-      setStats(statsRes)
-
-      if (overlayTypes.length) {
-        const overlayRes = await api.get<{ type: 'FeatureCollection'; features: OverlayFeature[] }>(
-          `/gis/overlays?${overlayParams.toString()}`,
-          token
-        )
-        setOverlays(overlayRes.features)
-      } else {
-        setOverlays([])
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load map data')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+    },
+    [bbox, category, features, overlayTypes, status, timeFrom, token, viewMode, mapPage]
+  )
   useEffect(() => {
     loadData({ resetPage: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, status, category, bbox, overlayTypes, timeFrom])
+  }, [loadData, token, status, category, bbox, overlayTypes, timeFrom])
+
+  // Realtime updates: on incident events, refresh current data slice
+  useRealtime((evt) => {
+    if (evt.type?.startsWith('incident:')) {
+      loadData({ resetPage: true })
+    }
+  })
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-0">

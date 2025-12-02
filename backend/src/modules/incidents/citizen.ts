@@ -3,6 +3,7 @@ import { query } from '../../config/db'
 import type { IncidentRecord } from './types'
 import type { UserRecord } from '../auth/types'
 import { classifyIncident } from './aiClient'
+import { emitEvent } from '../../utils/realtime'
 import { recordStatusChange, getHistory } from './history'
 import { isWithinGeoFence } from '../../utils/geofence'
 
@@ -97,6 +98,12 @@ export async function createIncident(req: Request, res: Response) {
       }
     : null
 
+  emitEvent('incident:new', {
+    id: incident.id,
+    status: incident.status,
+    category: incident.category,
+    created_at: incident.created_at,
+  })
   return res.status(201).json({ incident, ai: aiMeta })
 }
 

@@ -13,6 +13,7 @@ import { startNotificationWorker } from './modules/notifications/service'
 import rateLimit from 'express-rate-limit'
 import { requestLogger, withCorrelationId } from './middleware/logger'
 import { metricsMiddleware, metricsRouter } from './middleware/metrics'
+import { realtimeRouter } from './utils/realtime'
 
 const app = express()
 const port = process.env.PORT || 8000
@@ -62,6 +63,7 @@ app.use('/admin', adminRoutes)
 app.use('/gis', gisRoutes)
 app.use('/notifications', notificationRoutes)
 app.use('/metrics', metricsRouter)
+app.use('/realtime', realtimeRouter)
 
 ensureSchema()
   .then(() => {
