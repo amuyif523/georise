@@ -12,6 +12,7 @@ import notificationRoutes from './modules/notifications/routes'
 import { startNotificationWorker } from './modules/notifications/service'
 import rateLimit from 'express-rate-limit'
 import { requestLogger, withCorrelationId } from './middleware/logger'
+import { metricsMiddleware, metricsRouter } from './middleware/metrics'
 
 const app = express()
 const port = process.env.PORT || 8000
@@ -30,6 +31,7 @@ app.use(
 )
 app.use(withCorrelationId)
 app.use(requestLogger)
+app.use(metricsMiddleware)
 app.use(express.json({ limit: jsonLimit }))
 app.use(express.urlencoded({ limit: jsonLimit, extended: true }))
 
@@ -59,6 +61,7 @@ app.use('/agency', agencyIncidentRoutes)
 app.use('/admin', adminRoutes)
 app.use('/gis', gisRoutes)
 app.use('/notifications', notificationRoutes)
+app.use('/metrics', metricsRouter)
 
 ensureSchema()
   .then(() => {

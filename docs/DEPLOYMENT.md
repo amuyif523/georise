@@ -58,6 +58,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend npm 
 - Store backups off-box (object storage) to meet RPO.
 - Test restore quarterly: run `restore.sh` into a fresh DB instance.
 
+### 7) Monitoring hooks (minimum)
+- Health monitoring: poll `/health` for backend, AI, and frontend (if proxied) with alerts on failure.
+- Metrics: enable `/metrics` (internal) for request counts/latency aggregates (coarse). For richer metrics, add Prometheus/Grafana or a hosted service; alert on elevated latency/error rates and container restarts.
+- Logs: keep correlation IDs in logs; consider shipping logs to a centralized store for search/alerts.
+
 ### 6) Tear down
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.prod down
