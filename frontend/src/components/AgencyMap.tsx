@@ -93,7 +93,7 @@ export default function AgencyMap({ features, overlays = [], mode = "markers", o
       })
       .filter(Boolean) as { lat: number; lng: number; count: number; sample: Feature["properties"] }[]
 
-    if (serverClusters.length) return serverClusters
+    if (serverClusters.length || features.length > 500) return serverClusters.length ? serverClusters : []
 
     // Fallback: simple client-side bucketing
     const bucket = new Map<

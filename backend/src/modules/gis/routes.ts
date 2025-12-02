@@ -21,6 +21,8 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   const lat = req.query.lat ? Number(req.query.lat) : undefined
   const lng = req.query.lng ? Number(req.query.lng) : undefined
   const withinKm = req.query.withinKm ? Number(req.query.withinKm) : undefined
+  const criticalTypes = (req.query.criticalTypes as string | undefined)?.split(',').filter(Boolean)
+  const criticalKm = req.query.criticalKm ? Number(req.query.criticalKm) : 0.5
   const cluster = req.query.cluster === '1' || req.query.cluster === 'true'
   const clusterGrid = req.query.clusterGrid ? Number(req.query.clusterGrid) : 0.02
   const page = Number(req.query.page ?? 1)
@@ -62,6 +64,17 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   if (status) {
     params.push(status)
     filters.push(`status = $${params.length}`)
+  }
+  if (criticalTypes && criticalTypes.length) {
+    params.push(criticalTypes)
+    params.push(criticalKm * 1000)
+    filters.push(
+      `EXISTS (
+        SELECT 1 FROM overlays o
+        WHERE o.type = ANY($${params.length - 1}::text[])
+        AND ST_DWithin(geom, o.geom, $${params.length})
+      )`
+    )
   }
   if (category) {
     params.push(category)

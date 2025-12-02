@@ -49,6 +49,11 @@ export default function AgencyDashboard() {
   const [mapPage, setMapPage] = useState(1)
   const [mapHasMore, setMapHasMore] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [polyJson, setPolyJson] = useState<string>('')
+  const [nearLat, setNearLat] = useState('')
+  const [nearLng, setNearLng] = useState('')
+  const [nearKm, setNearKm] = useState('1')
+  const [criticalTypes, setCriticalTypes] = useState<string[]>([])
 
   const timeFrom = useMemo(() => {
     if (timeWindow === 'all') return undefined
@@ -71,16 +76,23 @@ export default function AgencyDashboard() {
         if (category) mapParams.append('category', category)
         if (timeFrom) mapParams.append('from', timeFrom)
         mapParams.append('pageSize', '200')
-        mapParams.append('page', String(nextPage))
-        if (viewMode === 'cluster') {
-          mapParams.append('cluster', '1')
-          mapParams.append('clusterGrid', '0.02')
-        }
+      mapParams.append('page', String(nextPage))
+      if (viewMode === 'cluster') {
+        mapParams.append('cluster', '1')
+        mapParams.append('clusterGrid', '0.02')
+      }
+      if (polyJson.trim()) mapParams.append('polygon', polyJson.trim())
+      if (nearLat && nearLng && nearKm) {
+        mapParams.append('lat', nearLat)
+        mapParams.append('lng', nearLng)
+        mapParams.append('withinKm', nearKm)
+      }
+      if (criticalTypes.length) mapParams.append('criticalTypes', criticalTypes.join(','))
 
-        const listParams = new URLSearchParams()
-        if (status) listParams.append('status', status)
-        if (category) listParams.append('category', category)
-        listParams.append('pageSize', '20')
+      const listParams = new URLSearchParams()
+      if (status) listParams.append('status', status)
+      if (category) listParams.append('category', category)
+      listParams.append('pageSize', '20')
 
         const overlayParams = new URLSearchParams()
         if (overlayTypes.length) overlayParams.append('types', overlayTypes.join(','))
@@ -200,6 +212,7 @@ export default function AgencyDashboard() {
           >
             <option value="24">Last 24h</option>
             <option value="72">Last 72h</option>
+            <option value="168">Last 7 days</option>
             <option value="all">All time</option>
           </select>
         </div>
@@ -310,6 +323,59 @@ export default function AgencyDashboard() {
                 <span className="capitalize">{t}</span>
               </label>
             ))}
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3 text-xs text-slate-200 pt-3">
+            <div className="space-y-1">
+              <p className="text-slate-400">Polygon (GeoJSON)</p>
+              <textarea
+                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2"
+                rows={3}
+                placeholder='{"type":"Polygon","coordinates":[[[...]]]}'
+                value={polyJson}
+                onChange={(e) => setPolyJson(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-slate-400">Near (lat,lng,km)</p>
+              <div className="flex gap-2">
+                <input
+                  className="w-1/3 bg-slate-900 border border-slate-700 rounded px-2 py-1"
+                  placeholder="lat"
+                  value={nearLat}
+                  onChange={(e) => setNearLat(e.target.value)}
+                />
+                <input
+                  className="w-1/3 bg-slate-900 border border-slate-700 rounded px-2 py-1"
+                  placeholder="lng"
+                  value={nearLng}
+                  onChange={(e) => setNearLng(e.target.value)}
+                />
+                <input
+                  className="w-1/3 bg-slate-900 border border-slate-700 rounded px-2 py-1"
+                  placeholder="km"
+                  value={nearKm}
+                  onChange={(e) => setNearKm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 pt-2">
+                <p className="text-slate-400">Critical overlays</p>
+                <div className="flex flex-wrap gap-2">
+                  {['hospital', 'police', 'fire', 'traffic', 'flood'].map((t) => (
+                    <label key={`crit-${t}`} className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="accent-cyan-400"
+                        checked={criticalTypes.includes(t)}
+                        onChange={(e) =>
+                          setCriticalTypes((prev) => (e.target.checked ? [...prev, t] : prev.filter((p) => p !== t)))
+                        }
+                      />
+                      <span className="capitalize">{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
