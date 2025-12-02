@@ -52,6 +52,12 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend npm 
 - DR/Backups: schedule DB snapshots (e.g., daily) and document restore. Define targets: RPO 24h (snapshot frequency), RTO 2h (time to restore stack). Test restore into a fresh DB at least once.
 - Scalability notes: use `cluster=1` on `/gis/incidents` for very large marker sets; keep bbox required and page size capped.
 
+### 6) Automating backups & restore
+- Use `infra/scripts/backup.sh` and `restore.sh` (requires `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` in env).
+- Cron example (Linux): `0 2 * * * PGHOST=... PGPORT=... PGUSER=... PGPASSWORD=... PGDATABASE=georise /path/to/backup.sh /var/backups/georise`
+- Store backups off-box (object storage) to meet RPO.
+- Test restore quarterly: run `restore.sh` into a fresh DB instance.
+
 ### 6) Tear down
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.prod down
