@@ -144,9 +144,9 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
     )
 
     const features = rows
-      .filter((r) => r.geojson)
+      .filter((r): r is typeof r & { geojson: string } => Boolean(r.geojson))
       .map((r, idx) => {
-        const geometry: Geometry = JSON.parse(r.geojson as string)
+        const geometry: Geometry = JSON.parse(r.geojson)
         return {
           type: 'Feature' as const,
           geometry,
@@ -181,9 +181,9 @@ router.get('/incidents', requireAuth, requireRole(['agency_staff', 'admin']), as
   )
 
   const features = rows
-    .filter((r) => r.geojson)
+    .filter((r): r is typeof r & { geojson: string } => Boolean(r.geojson))
     .map((r) => {
-      const geometry: Geometry = JSON.parse(r.geojson as string)
+      const geometry: Geometry = JSON.parse(r.geojson)
       return {
         type: 'Feature' as const,
         geometry,
