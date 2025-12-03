@@ -21,6 +21,7 @@ import {
   requestApproval,
   approveApproval,
   auditTrail,
+  listAiModels,
 } from './service'
 
 const router = Router()
@@ -47,5 +48,6 @@ router.get('/approvals', ...guard, listApprovals)
 router.post('/approvals', ...guard, requestApproval)
 router.post('/approvals/:id/decision', ...guard, approveApproval)
 router.get('/audit', ...guard, auditTrail)
+router.get('/ai-models', ...guard, listAiModels)
 
 export default router

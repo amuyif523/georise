@@ -6,6 +6,7 @@ import { classifyIncident } from './aiClient'
 import { emitEvent } from '../../utils/realtime'
 import { recordStatusChange, getHistory } from './history'
 import { isWithinGeoFence } from '../../utils/geofence'
+import { mapCategoryToAgencyType } from '../../utils/aiRouting'
 
 const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
@@ -104,7 +105,8 @@ export async function createIncident(req: Request, res: Response) {
     category: incident.category,
     created_at: incident.created_at,
   })
-  return res.status(201).json({ incident, ai: aiMeta })
+  const recommendedAgencyType = mapCategoryToAgencyType(ai?.category ?? incident.category)
+  return res.status(201).json({ incident, ai: aiMeta, recommendedAgencyType })
 }
 
 export async function listIncidents(req: Request, res: Response) {
@@ -143,6 +145,7 @@ export async function getIncident(req: Request, res: Response) {
   const incident = rows[0]
   if (!incident) return res.status(404).json({ error: 'Not found' })
   const history = await getHistory(incident.id)
+  const recommendedAgencyType = mapCategoryToAgencyType(incident.category_pred ?? incident.category)
   return res.json({
     incident: {
       id: incident.id,
@@ -162,5 +165,6 @@ export async function getIncident(req: Request, res: Response) {
           model_version: incident.model_version,
         }
       : null,
+    recommendedAgencyType,
   })
 }

@@ -6,6 +6,7 @@ import { getHistory } from './history'
 import { classifyIncident } from './aiClient'
 import { isWithinGeoFence } from '../../utils/geofence'
 import { emitEvent } from '../../utils/realtime'
+import { mapCategoryToAgencyType } from '../../utils/aiRouting'
 const MIN_CONFIDENCE = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.5')
 
 type AgencyContext = {
@@ -96,7 +97,8 @@ export async function getAgencyIncident(req: Request, res: Response) {
             configured_model: process.env.AI_MODEL_NAME || 'stub-logreg',
           }
         : null
-    return res.json({ incident, history, ai })
+    const recommendedAgencyType = mapCategoryToAgencyType(incident.category)
+    return res.json({ incident, history, ai, recommendedAgencyType })
   } catch (err) {
     return res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to fetch incident' })
   }
@@ -287,15 +289,6 @@ type AgencySuggestion = {
   type: string | null
   city: string | null
   distance_km: number | null
-}
-
-function mapCategoryToAgencyType(category?: string | null): string | null {
-  if (!category) return null
-  const c = category.toLowerCase()
-  if (c.includes('fire') || c.includes('hazard')) return 'fire'
-  if (c.includes('accident') || c.includes('crime') || c.includes('police')) return 'police'
-  if (c.includes('medical') || c.includes('injur') || c.includes('ambulance')) return 'medical'
-  return null
 }
 
 export async function listLowConfidence(req: Request, res: Response) {

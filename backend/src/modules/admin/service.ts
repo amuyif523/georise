@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 import { query } from '../../config/db'
 import { emitEvent } from '../../utils/realtime'
+const MODEL_NAME = process.env.AI_MODEL_NAME || 'stub-logreg'
+const MODEL_CHOICES = ['stub-logreg', 'minilm-logreg', MODEL_NAME]
 import type { UserRecord } from '../auth/types'
 
 type FlagRow = { key: string; enabled: boolean; description: string | null; meta: unknown; updated_at: Date }
@@ -323,4 +325,11 @@ export async function logAdminAction(
      VALUES ($1, $2, $3, $4, COALESCE($5, '{}'::jsonb))`,
     [actorId, action, entityType, entityId, payload ?? {}]
   )
+}
+
+export async function listAiModels(_req: Request, res: Response) {
+  res.json({
+    current: MODEL_NAME,
+    choices: Array.from(new Set(MODEL_CHOICES)),
+  })
 }
